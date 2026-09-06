@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Car, Plus } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Vehicle, VehicleModel } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function VehiclesPage() {
@@ -77,42 +78,49 @@ function VehiclesContent() {
       <ul className="space-y-2">
         {vehicles.map((v) => (
           <Card key={v.id} className="p-3 flex items-center justify-between text-sm">
-            <span>
-              <span className="font-medium">{modelLabel(v.model_id)}</span> — {v.registration_number}
+            <span className="flex items-center gap-3">
+              <IconTile icon={Car} tone={v.vehicle_status === "active" ? "indigo" : "slate"} />
+              <span>
+                <span className="font-medium block">{modelLabel(v.model_id)}</span>
+                <span className="text-slate-500">{v.registration_number}</span>
+              </span>
             </span>
             <div className="flex items-center gap-2">
               <Badge status={v.vehicle_status} />
-              <Button variant="ghost" onClick={() => toggleActive(v)}>
+              <Button variant="ghost" size="sm" onClick={() => toggleActive(v)}>
                 {v.vehicle_status === "active" ? "Deactivate" : "Reactivate"}
               </Button>
             </div>
           </Card>
         ))}
         {vehicles.length === 0 && (
-          <EmptyState>No vehicles yet — add one below, then head to Stations to book or start charging.</EmptyState>
+          <EmptyState icon={Car}>No vehicles yet — add one below, then head to Stations to book or start charging.</EmptyState>
         )}
       </ul>
 
       <Card className="p-4 max-w-sm">
-        <h2 className="font-medium text-sm mb-3">Add a vehicle</h2>
+        <h2 className="font-medium text-sm text-slate-900 mb-3">Add a vehicle</h2>
         <form onSubmit={handleAdd} className="space-y-3">
-          <Select className="w-full" value={modelId} onChange={(e) => setModelId(Number(e.target.value))}>
-            {models.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.make} {m.model_name} ({m.battery_capacity_kwh} kWh)
-              </option>
-            ))}
-          </Select>
-          <Input
-            placeholder="Registration number"
-            className="w-full"
-            value={registration}
-            onChange={(e) => setRegistration(e.target.value)}
-            required
-          />
+          <Field label="Model">
+            <Select className="w-full" value={modelId} onChange={(e) => setModelId(Number(e.target.value))}>
+              {models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.make} {m.model_name} ({m.battery_capacity_kwh} kWh)
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Registration number">
+            <Input
+              className="w-full"
+              value={registration}
+              onChange={(e) => setRegistration(e.target.value)}
+              required
+            />
+          </Field>
           {error && <Alert type="error">{error}</Alert>}
-          <Button type="submit" className="w-full">
-            Add vehicle
+          <Button type="submit" className="w-full justify-center">
+            <Plus size={15} /> Add vehicle
           </Button>
         </form>
       </Card>

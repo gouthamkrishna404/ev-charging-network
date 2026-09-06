@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Building2, UserCog } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Alert, Button, Card, Input } from "@/components/ui";
+import { Alert, Button, Card, Field, Input } from "@/components/ui";
 
 export default function RegisterOperatorPage() {
   const router = useRouter();
@@ -41,70 +42,71 @@ export default function RegisterOperatorPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto">
-      <h1 className="text-xl font-semibold mb-1 text-center">Register your charging network</h1>
-      <p className="text-sm text-slate-500 mb-4 text-center">
-        This creates your operator account and a super-admin login for you. You can add more admins and
-        stations once you&apos;re in.
-      </p>
+    <div className="max-w-md mx-auto pt-6">
+      <div className="flex flex-col items-center mb-6">
+        <span className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center mb-3">
+          <Building2 size={20} className="text-amber-600" strokeWidth={2} />
+        </span>
+        <h1 className="text-xl font-semibold text-slate-900 tracking-tight text-center">Register your charging network</h1>
+        <p className="text-sm text-slate-500 mt-1.5 text-center max-w-sm">
+          This creates your operator account and a super-admin login for you. You can add more admins and
+          stations once you&apos;re in.
+        </p>
+      </div>
       <Card className="p-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Operator</p>
-            <Input
-              placeholder="Company / network name"
-              className="w-full"
-              value={operatorName}
-              onChange={(e) => setOperatorName(e.target.value)}
-              required
-            />
-            <Input
-              type="email"
-              placeholder="Contact email"
-              className="w-full"
-              value={contactEmail}
-              onChange={(e) => setContactEmail(e.target.value)}
-              required
-            />
-            <Input
-              placeholder="Phone (optional)"
-              className="w-full"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <Building2 size={13} /> Operator
+            </div>
+            <Field label="Company / network name">
+              <Input className="w-full" value={operatorName} onChange={(e) => setOperatorName(e.target.value)} required />
+            </Field>
+            <Field label="Contact email">
+              <Input
+                type="email"
+                className="w-full"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Phone (optional)">
+              <Input className="w-full" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </Field>
           </div>
 
-          <div className="space-y-2 border-t border-slate-100 pt-4">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Your admin login</p>
-            <Input
-              placeholder="Your full name"
-              className="w-full"
-              value={adminName}
-              onChange={(e) => setAdminName(e.target.value)}
-              required
-            />
-            <Input
-              type="email"
-              placeholder="Your email"
-              className="w-full"
-              value={adminEmail}
-              onChange={(e) => setAdminEmail(e.target.value)}
-              required
-            />
-            <Input
-              type="password"
-              placeholder="Password"
-              className="w-full"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              required
-              minLength={8}
-            />
+          <div className="space-y-3 border-t border-slate-100 pt-5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <UserCog size={13} /> Your admin login
+            </div>
+            <Field label="Your full name">
+              <Input className="w-full" value={adminName} onChange={(e) => setAdminName(e.target.value)} required />
+            </Field>
+            <Field label="Your email">
+              <Input
+                type="email"
+                className="w-full"
+                value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Password">
+              <Input
+                type="password"
+                className="w-full"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </Field>
           </div>
 
           {error && <Alert type="error">{error}</Alert>}
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Creating account..." : "Create operator account"}
+          <Button type="submit" loading={loading} className="w-full justify-center">
+            Create operator account
           </Button>
         </form>
       </Card>

@@ -72,7 +72,9 @@ def _station_query(db: Session):
         joinedload(ChargingStation.location),
         joinedload(ChargingStation.tariff),
         joinedload(ChargingStation.operating_hours),
-        joinedload(ChargingStation.chargers).joinedload(Charger.connectors),
+        joinedload(ChargingStation.chargers)
+        .joinedload(Charger.connectors)
+        .joinedload(Connector.connector_type),
     )
 
 

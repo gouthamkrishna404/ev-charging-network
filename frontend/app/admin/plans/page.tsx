@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Plus, RotateCcw, Tag, X } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
 import { ChargingPlan } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader } from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function AdminPlansPage() {
@@ -80,45 +81,58 @@ function AdminPlansContent() {
       <ul className="space-y-2">
         {plans.map((plan) => (
           <Card key={plan.id} className="p-3 flex items-center justify-between text-sm">
-            <span>
-              <span className="font-medium">{plan.plan_name}</span> — ₹{plan.subscription_fee} / {plan.validity_days}{" "}
-              days — {plan.discount_percentage}% off
+            <span className="flex items-center gap-3">
+              <IconTile icon={Tag} tone={plan.status === "active" ? "indigo" : "slate"} />
+              <span>
+                <span className="font-medium">{plan.plan_name}</span> — ₹{plan.subscription_fee} /{" "}
+                {plan.validity_days} days — {plan.discount_percentage}% off
+              </span>
             </span>
             <div className="flex items-center gap-2">
               <Badge status={plan.status} />
               {canManage && plan.status === "active" && (
-                <Button variant="ghost" onClick={() => deactivate(plan.id)}>
-                  Deactivate
+                <Button variant="ghost" size="sm" onClick={() => deactivate(plan.id)}>
+                  <X size={12} /> Deactivate
                 </Button>
               )}
               {canManage && plan.status === "inactive" && (
-                <Button variant="ghost" onClick={() => reactivate(plan.id)}>
-                  Reactivate
+                <Button variant="ghost" size="sm" onClick={() => reactivate(plan.id)}>
+                  <RotateCcw size={12} /> Reactivate
                 </Button>
               )}
             </div>
           </Card>
         ))}
-        {plans.length === 0 && <EmptyState>No plans yet.</EmptyState>}
+        {plans.length === 0 && <EmptyState icon={Tag}>No plans yet.</EmptyState>}
       </ul>
 
       {canManage ? (
-        <Card className="p-4 max-w-md">
-          <h2 className="font-medium text-sm mb-3">Create a plan</h2>
+        <Card className="p-5 max-w-md">
+          <h2 className="font-medium text-sm text-slate-900 mb-3">Create a plan</h2>
           <form onSubmit={createPlan} className="space-y-3">
-            <Input placeholder="Plan name" value={planName} onChange={(e) => setPlanName(e.target.value)} required />
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="number" step="0.01" placeholder="Fee (₹)" value={fee} onChange={(e) => setFee(e.target.value)} required />
-              <Input type="number" placeholder="Validity (days)" value={validityDays} onChange={(e) => setValidityDays(e.target.value)} required />
-              <Input type="number" step="0.01" placeholder="Discount (%)" value={discount} onChange={(e) => setDiscount(e.target.value)} required />
-              <Input type="number" placeholder="Max sessions (blank = unlimited)" value={maxSessions} onChange={(e) => setMaxSessions(e.target.value)} />
+            <Field label="Plan name">
+              <Input className="w-full" value={planName} onChange={(e) => setPlanName(e.target.value)} required />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Fee (₹)">
+                <Input type="number" step="0.01" className="w-full" value={fee} onChange={(e) => setFee(e.target.value)} required />
+              </Field>
+              <Field label="Validity (days)">
+                <Input type="number" className="w-full" value={validityDays} onChange={(e) => setValidityDays(e.target.value)} required />
+              </Field>
+              <Field label="Discount (%)">
+                <Input type="number" step="0.01" className="w-full" value={discount} onChange={(e) => setDiscount(e.target.value)} required />
+              </Field>
+              <Field label="Max sessions">
+                <Input type="number" className="w-full" placeholder="Unlimited" value={maxSessions} onChange={(e) => setMaxSessions(e.target.value)} />
+              </Field>
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input type="checkbox" checked={priorityBooking} onChange={(e) => setPriorityBooking(e.target.checked)} />
               Priority booking
             </label>
-            <Button type="submit" className="w-full">
-              Create plan
+            <Button type="submit" className="w-full justify-center">
+              <Plus size={15} /> Create plan
             </Button>
           </form>
         </Card>

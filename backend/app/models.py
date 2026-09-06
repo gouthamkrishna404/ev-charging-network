@@ -219,6 +219,10 @@ class Connector(Base):
     bookings = relationship("Booking", back_populates="connector")
     maintenance_tickets = relationship("Maintenance", back_populates="connector")
 
+    @property
+    def connector_type_name(self) -> str:
+        return self.connector_type.type_name
+
 
 class Tariff(Base):
     __tablename__ = "tariffs"

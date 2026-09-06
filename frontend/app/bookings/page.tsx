@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ArrowRight, Calendar, Plug, Square, X, Zap } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Booking, Session } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, PageHeader } from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, IconTile, PageHeader } from "@/components/ui";
 import LiveEnergyEstimate from "@/components/LiveEnergyEstimate";
 import RequireAuth from "@/components/RequireAuth";
 
@@ -85,23 +86,31 @@ function BookingsContent() {
         <ul className="space-y-3">
           {sessions.map((s) => (
             <Card key={s.id} className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">
-                  Connector #{s.connector_id} — started {new Date(s.start_time).toLocaleString()}
-                  {s.energy_delivered_kwh && <> · {s.energy_delivered_kwh} kWh</>}
-                </span>
+              <div className="flex items-center gap-3">
+                <IconTile icon={Zap} tone={s.session_status === "charging" ? "indigo" : "slate"} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-900">
+                    Connector #{s.connector_id}
+                    <span className="text-slate-400 font-normal"> · started {new Date(s.start_time).toLocaleString()}</span>
+                  </p>
+                  {s.energy_delivered_kwh && (
+                    <p className="text-sm text-slate-500">{s.energy_delivered_kwh} kWh delivered</p>
+                  )}
+                </div>
                 <Badge status={s.session_status} />
               </div>
               {s.session_status === "charging" && (
-                <div className="mt-3 space-y-2">
+                <div className="mt-3 pl-[52px] space-y-2.5">
                   <LiveEnergyEstimate startTime={s.start_time} powerKw={Number(s.connector_power_kw)} />
-                  <Button onClick={() => endSession(s.id)}>End session</Button>
+                  <Button onClick={() => endSession(s.id)}>
+                    <Square size={12} fill="currentColor" /> End session
+                  </Button>
                 </div>
               )}
             </Card>
           ))}
           {sessions.length === 0 && (
-            <EmptyState>
+            <EmptyState icon={Zap}>
               No sessions yet —{" "}
               <Link href="/stations" className="underline">
                 find a station
@@ -120,31 +129,36 @@ function BookingsContent() {
         <ul className="space-y-3">
           {bookings.map((b) => (
             <Card key={b.id} className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">
-                  Connector #{b.connector_id} — {new Date(b.start_time).toLocaleString()} to{" "}
-                  {new Date(b.end_time).toLocaleTimeString()}
-                </span>
-                <div className="flex items-center gap-2">
-                  <Badge status={b.status} />
-                  {b.status === "confirmed" && (
-                    <>
-                      <Button onClick={() => startSession(b)}>Start session</Button>
-                      <Button variant="secondary" onClick={() => cancelBooking(b.id)}>
-                        Cancel
-                      </Button>
-                    </>
-                  )}
+              <div className="flex items-center gap-3">
+                <IconTile icon={Calendar} tone={b.status === "confirmed" ? "indigo" : "slate"} />
+                <div className="flex-1 min-w-0 text-sm text-slate-900">
+                  Connector #{b.connector_id}
+                  <div className="text-slate-500">
+                    {new Date(b.start_time).toLocaleString()} — {new Date(b.end_time).toLocaleTimeString()}
+                  </div>
                 </div>
+                <Badge status={b.status} />
               </div>
+              {b.status === "confirmed" && (
+                <div className="mt-3 pl-[52px] flex gap-2">
+                  <Button size="sm" onClick={() => startSession(b)}>
+                    <Plug size={12} /> Start session
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => cancelBooking(b.id)}>
+                    <X size={12} /> Cancel
+                  </Button>
+                </div>
+              )}
             </Card>
           ))}
-          {bookings.length === 0 && <EmptyState>No upcoming bookings — walk-in sessions won&apos;t show up here.</EmptyState>}
+          {bookings.length === 0 && (
+            <EmptyState icon={Calendar}>No upcoming bookings — walk-in sessions won&apos;t show up here.</EmptyState>
+          )}
         </ul>
       </div>
 
-      <Link href="/bills" className="text-sm text-slate-600 underline">
-        View my bills →
+      <Link href="/bills" className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+        View my bills <ArrowRight size={14} />
       </Link>
     </div>
   );

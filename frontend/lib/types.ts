@@ -30,6 +30,7 @@ export interface Location {
 export interface ConnectorInfo {
   id: number;
   connector_type_id: number;
+  connector_type_name: string;
   max_power_kw: string;
   status: string;
 }

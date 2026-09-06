@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Car, UserPlus } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Alert, Button, Card, Input } from "@/components/ui";
+import { Alert, Button, Card, Field, Input } from "@/components/ui";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -32,40 +34,53 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="max-w-sm mx-auto">
-      <h1 className="text-xl font-semibold mb-4 text-center">Create your driver account</h1>
+    <div className="max-w-sm mx-auto pt-6">
+      <div className="flex flex-col items-center mb-6">
+        <span className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center mb-3">
+          <Car size={20} className="text-indigo-600" strokeWidth={2} />
+        </span>
+        <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Create your driver account</h1>
+        <p className="text-sm text-slate-500 mt-1">Free — start browsing stations right away.</p>
+      </div>
       <Card className="p-6">
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <Input placeholder="Full name" className="w-full" value={name} onChange={(e) => setName(e.target.value)} required />
-          <Input
-            type="email"
-            placeholder="Email"
-            className="w-full"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <Input
-            type="password"
-            placeholder="Password"
-            className="w-full"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-          />
-          <Input
-            placeholder="Phone (optional)"
-            className="w-full"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="Full name">
+            <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} required />
+          </Field>
+          <Field label="Email">
+            <Input
+              type="email"
+              className="w-full"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Password">
+            <Input
+              type="password"
+              className="w-full"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+            />
+          </Field>
+          <Field label="Phone (optional)">
+            <Input className="w-full" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </Field>
           {error && <Alert type="error">{error}</Alert>}
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Creating account..." : "Register"}
+          <Button type="submit" loading={loading} className="w-full justify-center">
+            <UserPlus size={15} /> Register
           </Button>
         </form>
       </Card>
+      <p className="text-sm text-slate-500 mt-6 text-center">
+        Already have an account?{" "}
+        <Link href="/login" className="text-indigo-600 hover:text-indigo-800 font-medium">
+          Log in
+        </Link>
+      </p>
     </div>
   );
 }

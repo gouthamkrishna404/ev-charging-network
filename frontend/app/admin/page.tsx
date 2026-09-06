@@ -1,14 +1,39 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Ban,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  MapPin,
+  Plug,
+  Plus,
+  Power,
+  Tag,
+  UserMinus,
+  UserPlus,
+  Users,
+  Wrench,
+  Zap,
+} from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
 import { ConnectorTypeOut, Station } from "@/lib/types";
 import { AdminBooking, Maintenance, Revenue, Technician, TeamAdmin } from "@/lib/admin-types";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select, Stat, Tabs } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const TABS = [
+  { key: "chargers", label: "Chargers", icon: Plug },
+  { key: "hours", label: "Hours", icon: Clock },
+  { key: "team", label: "Team", icon: Users },
+  { key: "maintenance", label: "Maintenance", icon: Wrench },
+  { key: "bookings", label: "Bookings", icon: Calendar },
+];
 
 export default function AdminPage() {
   return (
@@ -23,6 +48,7 @@ function AdminContent() {
   const [connectorTypes, setConnectorTypes] = useState<ConnectorTypeOut[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState("chargers");
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [revenue, setRevenue] = useState<Revenue | null>(null);
   const [maintenance, setMaintenance] = useState<Maintenance[]>([]);
@@ -32,7 +58,6 @@ function AdminContent() {
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [canManageTeam, setCanManageTeam] = useState(false);
 
-  // new station form
   const [showNewStation, setShowNewStation] = useState(false);
   const [stationName, setStationName] = useState("");
   const [addressLine, setAddressLine] = useState("");
@@ -40,7 +65,6 @@ function AdminContent() {
   const [stateName, setStateName] = useState("");
   const [pricePerKwh, setPricePerKwh] = useState("12.50");
 
-  // per-station transient form state
   const [chargerModel, setChargerModel] = useState("");
   const [chargerPower, setChargerPower] = useState("50");
   const [connectorTypeId, setConnectorTypeId] = useState<number | "">("");
@@ -81,6 +105,7 @@ function AdminContent() {
       return;
     }
     setExpanded(stationId);
+    setActiveTab("chargers");
     const station = stations.find((st) => st.id === stationId);
     if (station) {
       const initHours = Object.fromEntries(
@@ -262,19 +287,40 @@ function AdminContent() {
       <PageHeader
         title="Stations I Manage"
         subtitle="Click a station to manage its chargers, connectors, pricing, hours, and maintenance."
-        action={<Button onClick={() => setShowNewStation(!showNewStation)}>{showNewStation ? "Cancel" : "+ New station"}</Button>}
+        action={
+          <Button onClick={() => setShowNewStation(!showNewStation)}>
+            <Plus size={15} /> {showNewStation ? "Cancel" : "New station"}
+          </Button>
+        }
       />
       {message && <Alert type={message.type}>{message.text}</Alert>}
 
       {showNewStation && (
-        <Card className="p-4">
+        <Card className="p-5">
           <form onSubmit={createStation} className="grid gap-3 sm:grid-cols-2">
-            <Input placeholder="Station name" value={stationName} onChange={(e) => setStationName(e.target.value)} required />
-            <Input placeholder="Price per kWh" type="number" step="0.01" value={pricePerKwh} onChange={(e) => setPricePerKwh(e.target.value)} required />
-            <Input placeholder="Address" value={addressLine} onChange={(e) => setAddressLine(e.target.value)} required />
-            <Input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} required />
-            <Input placeholder="State" value={stateName} onChange={(e) => setStateName(e.target.value)} required />
-            <Button type="submit" className="sm:col-span-2">
+            <Field label="Station name">
+              <Input className="w-full" value={stationName} onChange={(e) => setStationName(e.target.value)} required />
+            </Field>
+            <Field label="Price per kWh">
+              <Input
+                type="number"
+                step="0.01"
+                className="w-full"
+                value={pricePerKwh}
+                onChange={(e) => setPricePerKwh(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Address">
+              <Input className="w-full" value={addressLine} onChange={(e) => setAddressLine(e.target.value)} required />
+            </Field>
+            <Field label="City">
+              <Input className="w-full" value={city} onChange={(e) => setCity(e.target.value)} required />
+            </Field>
+            <Field label="State">
+              <Input className="w-full" value={stateName} onChange={(e) => setStateName(e.target.value)} required />
+            </Field>
+            <Button type="submit" className="sm:col-span-2 justify-center">
               Create station
             </Button>
           </form>
@@ -283,232 +329,258 @@ function AdminContent() {
 
       <ul className="space-y-3">
         {stations.map((s) => (
-          <Card key={s.id} className="p-4">
-            <button onClick={() => toggle(s.id)} className="font-medium text-slate-900 hover:underline text-left w-full flex justify-between">
-              <span>{s.station_name}</span>
-              <Badge status={s.status} />
-            </button>
-            <p className="text-sm text-slate-500">
-              {s.location.address_line}, {s.location.city} · ₹{s.tariff?.price_per_kwh}/kWh
-            </p>
-
-            {expanded === s.id && (
-              <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
-                {revenue && (
-                  <p className="text-sm">
-                    Revenue: <span className="font-medium">₹{revenue.total_revenue}</span> from {revenue.completed_sessions} completed session(s)
+          <Card key={s.id} className="overflow-hidden">
+            <button onClick={() => toggle(s.id)} className="w-full text-left p-4 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+              <IconTile icon={Zap} tone={s.status === "active" ? "indigo" : "slate"} />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-slate-900">{s.station_name}</p>
+                <p className="text-sm text-slate-500 flex items-center gap-1 truncate">
+                  <MapPin size={12} className="shrink-0" />
+                  {s.location.address_line}, {s.location.city}
+                </p>
+                {s.tariff && (
+                  <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
+                    <Tag size={11} className="shrink-0" />₹{s.tariff.price_per_kwh}/kWh
                   </p>
                 )}
+              </div>
+              <Badge status={s.status} />
+            </button>
 
-                <div>
-                  <p className="text-sm font-medium mb-1">Pricing & status</p>
+            {expanded === s.id && (
+              <div className="border-t border-slate-100">
+                <div className="p-4 pb-0 flex flex-wrap items-center justify-between gap-4">
+                  {revenue && (
+                    <div className="flex gap-8">
+                      <Stat value={`₹${revenue.total_revenue}`} label="revenue" />
+                      <Stat value={revenue.completed_sessions} label="sessions" />
+                    </div>
+                  )}
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm text-slate-500">₹</span>
                     <Input
                       type="number"
                       step="0.01"
-                      className="w-28"
+                      className="w-24"
                       value={editPrice}
                       onChange={(e) => setEditPrice(e.target.value)}
                     />
-                    <span className="text-sm text-slate-500">/ kWh</span>
-                    <Button variant="secondary" onClick={() => updateTariff(s.id)}>
-                      Save price
+                    <span className="text-sm text-slate-500">/kWh</span>
+                    <Button size="sm" variant="secondary" onClick={() => updateTariff(s.id)}>
+                      <DollarSign size={12} /> Save
                     </Button>
-                    <Button variant="secondary" onClick={() => toggleStationStatus(s.id, s.status)}>
-                      {s.status === "active" ? "Deactivate station" : "Reactivate station"}
+                    <Button size="sm" variant="secondary" onClick={() => toggleStationStatus(s.id, s.status)}>
+                      <Power size={12} /> {s.status === "active" ? "Deactivate" : "Reactivate"}
                     </Button>
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-sm font-medium mb-1">Managed by</p>
-                  <ul className="space-y-1 text-sm mb-2">
-                    {stationAdmins.map((a) => (
-                      <li key={a.id} className="flex items-center justify-between bg-slate-50 rounded-md p-2">
-                        <span className="flex items-center gap-2">
-                          {a.name} <Badge status={a.role} />
-                        </span>
-                        {canManageTeam && stationAdmins.length > 1 && (
-                          <Button variant="ghost" onClick={() => unassignAdmin(s.id, a.id)}>
-                            Remove
+                <div className="px-4 mt-4">
+                  <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
+                </div>
+
+                <div className="p-4">
+                  {activeTab === "chargers" && (
+                    <div>
+                      <ul className="space-y-2">
+                        {s.chargers.map((c) => (
+                          <li key={c.id} className="text-sm bg-slate-50 rounded-lg p-3">
+                            <p className="font-medium flex items-center gap-2">
+                              <Plug size={14} className="text-slate-400" />
+                              {c.charger_model ?? "Charger"} <span className="text-slate-400 font-normal">· {c.power_capacity_kw} kW</span>
+                            </p>
+                            <ul className="ml-6 mt-1.5 space-y-1">
+                              {c.connectors.map((con) => (
+                                <li key={con.id} className="flex items-center gap-2 text-slate-600">
+                                  {con.connector_type_name} #{con.id} · {con.max_power_kw} kW <Badge status={con.status} />
+                                </li>
+                              ))}
+                            </ul>
+                            <form onSubmit={(e) => addConnector(c.id, e)} className="flex flex-wrap gap-2 mt-2 ml-6">
+                              <Select
+                                value={connectorTypeId}
+                                onChange={(e) => setConnectorTypeId(Number(e.target.value))}
+                                className="text-xs"
+                              >
+                                <option value="">Connector type…</option>
+                                {connectorTypes.map((ct) => (
+                                  <option key={ct.id} value={ct.id}>
+                                    {ct.type_name}
+                                  </option>
+                                ))}
+                              </Select>
+                              <Input
+                                type="number"
+                                className="w-24 text-xs"
+                                value={connectorPower}
+                                onChange={(e) => setConnectorPower(e.target.value)}
+                                placeholder="kW"
+                              />
+                              <Button type="submit" variant="secondary" size="sm">
+                                Add connector
+                              </Button>
+                            </form>
+                          </li>
+                        ))}
+                        {s.chargers.length === 0 && <EmptyState icon={Plug}>No chargers yet.</EmptyState>}
+                      </ul>
+                      <form onSubmit={(e) => addCharger(s.id, e)} className="flex flex-wrap gap-2 mt-3">
+                        <Input placeholder="Charger model" value={chargerModel} onChange={(e) => setChargerModel(e.target.value)} />
+                        <Input
+                          type="number"
+                          className="w-28"
+                          value={chargerPower}
+                          onChange={(e) => setChargerPower(e.target.value)}
+                          placeholder="kW"
+                        />
+                        <Button type="submit" variant="secondary">
+                          <Plus size={13} /> Add charger
+                        </Button>
+                      </form>
+                    </div>
+                  )}
+
+                  {activeTab === "hours" && (
+                    <div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {DAYS.map((d) => (
+                          <label key={d} className="flex items-center gap-2 text-xs text-slate-600">
+                            <input
+                              type="checkbox"
+                              checked={hours[d].enabled}
+                              onChange={(e) => setHours({ ...hours, [d]: { ...hours[d], enabled: e.target.checked } })}
+                            />
+                            <span className="w-20">{d}</span>
+                            <input
+                              type="time"
+                              value={hours[d].open}
+                              disabled={!hours[d].enabled}
+                              onChange={(e) => setHours({ ...hours, [d]: { ...hours[d], open: e.target.value } })}
+                              className="border border-slate-300 rounded px-1 py-0.5"
+                            />
+                            <input
+                              type="time"
+                              value={hours[d].close}
+                              disabled={!hours[d].enabled}
+                              onChange={(e) => setHours({ ...hours, [d]: { ...hours[d], close: e.target.value } })}
+                              className="border border-slate-300 rounded px-1 py-0.5"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <Button variant="secondary" size="sm" className="mt-3" onClick={() => saveHours(s.id)}>
+                        Save hours
+                      </Button>
+                      <p className="text-xs text-slate-400 mt-1.5">Unchecked days = closed. No days checked = open 24/7.</p>
+                    </div>
+                  )}
+
+                  {activeTab === "team" && (
+                    <div>
+                      <ul className="space-y-1.5 mb-3">
+                        {stationAdmins.map((a) => (
+                          <li key={a.id} className="flex items-center justify-between bg-slate-50 rounded-lg p-2.5 text-sm">
+                            <span className="flex items-center gap-2">
+                              {a.name} <Badge status={a.role} />
+                            </span>
+                            {canManageTeam && stationAdmins.length > 1 && (
+                              <Button variant="ghost" size="sm" onClick={() => unassignAdmin(s.id, a.id)}>
+                                <UserMinus size={12} /> Remove
+                              </Button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      {canManageTeam && (
+                        <div className="flex gap-2">
+                          <Select value={assignAdminId} onChange={(e) => setAssignAdminId(Number(e.target.value))}>
+                            <option value="">Add admin…</option>
+                            {team
+                              .filter((t) => !stationAdmins.some((sa) => sa.id === t.id))
+                              .map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name}
+                                </option>
+                              ))}
+                          </Select>
+                          <Button variant="secondary" onClick={() => assignAdmin(s.id)}>
+                            <UserPlus size={13} /> Assign
                           </Button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                  {canManageTeam && (
-                    <div className="flex gap-2">
-                      <Select value={assignAdminId} onChange={(e) => setAssignAdminId(Number(e.target.value))}>
-                        <option value="">Add admin…</option>
-                        {team
-                          .filter((t) => !stationAdmins.some((sa) => sa.id === t.id))
-                          .map((t) => (
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === "maintenance" && (
+                    <div>
+                      <ul className="space-y-1.5 mb-3">
+                        {maintenance.map((m) => (
+                          <li key={m.id} className="flex items-center justify-between bg-slate-50 rounded-lg p-2.5 text-sm">
+                            <span>
+                              Connector #{m.connector_id} — {m.issue_description} <Badge status={m.status} />
+                            </span>
+                            {m.status !== "completed" && (
+                              <Button variant="ghost" size="sm" onClick={() => completeMaintenance(m.id, s.id)}>
+                                <CheckCircle2 size={12} /> Complete
+                              </Button>
+                            )}
+                          </li>
+                        ))}
+                        {maintenance.length === 0 && <EmptyState icon={Wrench}>No maintenance tickets.</EmptyState>}
+                      </ul>
+                      <form onSubmit={(e) => createMaintenance(s.id, e)} className="flex flex-wrap gap-2">
+                        <Select value={maintenanceConnectorId} onChange={(e) => setMaintenanceConnectorId(Number(e.target.value))}>
+                          <option value="">Connector…</option>
+                          {s.chargers.flatMap((c) => c.connectors).map((con) => (
+                            <option key={con.id} value={con.id}>
+                              #{con.id}
+                            </option>
+                          ))}
+                        </Select>
+                        <Select value={maintenanceTechId} onChange={(e) => setMaintenanceTechId(Number(e.target.value))}>
+                          <option value="">Technician…</option>
+                          {technicians.map((t) => (
                             <option key={t.id} value={t.id}>
                               {t.name}
                             </option>
                           ))}
-                      </Select>
-                      <Button variant="secondary" onClick={() => assignAdmin(s.id)}>
-                        Assign
-                      </Button>
+                        </Select>
+                        <Input
+                          placeholder="Issue description"
+                          className="flex-1 min-w-[160px]"
+                          value={maintenanceIssue}
+                          onChange={(e) => setMaintenanceIssue(e.target.value)}
+                        />
+                        <Button type="submit" variant="secondary">
+                          Open ticket
+                        </Button>
+                      </form>
+                      {technicians.length === 0 && (
+                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                          <Ban size={12} /> No technicians yet — add one from the Team page first.
+                        </p>
+                      )}
                     </div>
                   )}
-                </div>
 
-                <div>
-                  <p className="text-sm font-medium mb-1">Chargers & connectors</p>
-                  <ul className="space-y-2">
-                    {s.chargers.map((c) => (
-                      <li key={c.id} className="text-sm bg-slate-50 rounded-md p-2">
-                        <p className="font-medium">
-                          {c.charger_model ?? "Charger"} — {c.power_capacity_kw} kW
-                        </p>
-                        <ul className="ml-3 mt-1 space-y-1">
-                          {c.connectors.map((con) => (
-                            <li key={con.id} className="flex items-center gap-2 text-slate-600">
-                              Connector #{con.id} — {con.max_power_kw} kW <Badge status={con.status} />
-                            </li>
-                          ))}
-                        </ul>
-                        <form onSubmit={(e) => addConnector(c.id, e)} className="flex flex-wrap gap-2 mt-2">
-                          <Select
-                            value={connectorTypeId}
-                            onChange={(e) => setConnectorTypeId(Number(e.target.value))}
-                            className="text-xs"
-                          >
-                            <option value="">Connector type…</option>
-                            {connectorTypes.map((ct) => (
-                              <option key={ct.id} value={ct.id}>
-                                {ct.type_name}
-                              </option>
-                            ))}
-                          </Select>
-                          <Input
-                            type="number"
-                            className="w-24 text-xs"
-                            value={connectorPower}
-                            onChange={(e) => setConnectorPower(e.target.value)}
-                            placeholder="kW"
-                          />
-                          <Button type="submit" variant="secondary">
-                            Add connector
-                          </Button>
-                        </form>
-                      </li>
-                    ))}
-                  </ul>
-                  <form onSubmit={(e) => addCharger(s.id, e)} className="flex flex-wrap gap-2 mt-2">
-                    <Input placeholder="Charger model" value={chargerModel} onChange={(e) => setChargerModel(e.target.value)} />
-                    <Input
-                      type="number"
-                      className="w-28"
-                      value={chargerPower}
-                      onChange={(e) => setChargerPower(e.target.value)}
-                      placeholder="kW"
-                    />
-                    <Button type="submit" variant="secondary">
-                      Add charger
-                    </Button>
-                  </form>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium mb-1">Operating hours</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                    {DAYS.map((d) => (
-                      <label key={d} className="flex items-center gap-2 text-xs text-slate-600">
-                        <input
-                          type="checkbox"
-                          checked={hours[d].enabled}
-                          onChange={(e) => setHours({ ...hours, [d]: { ...hours[d], enabled: e.target.checked } })}
-                        />
-                        <span className="w-20">{d}</span>
-                        <input
-                          type="time"
-                          value={hours[d].open}
-                          disabled={!hours[d].enabled}
-                          onChange={(e) => setHours({ ...hours, [d]: { ...hours[d], open: e.target.value } })}
-                          className="border border-slate-300 rounded px-1 py-0.5"
-                        />
-                        <input
-                          type="time"
-                          value={hours[d].close}
-                          disabled={!hours[d].enabled}
-                          onChange={(e) => setHours({ ...hours, [d]: { ...hours[d], close: e.target.value } })}
-                          className="border border-slate-300 rounded px-1 py-0.5"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  <Button variant="secondary" className="mt-2" onClick={() => saveHours(s.id)}>
-                    Save hours
-                  </Button>
-                  <p className="text-xs text-slate-400 mt-1">Unchecked days = closed. No days checked = open 24/7.</p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium mb-1">Maintenance</p>
-                  <ul className="space-y-1 text-sm mb-2">
-                    {maintenance.map((m) => (
-                      <li key={m.id} className="flex items-center justify-between bg-slate-50 rounded-md p-2">
-                        <span>
-                          Connector #{m.connector_id} — {m.issue_description} <Badge status={m.status} />
-                        </span>
-                        {m.status !== "completed" && (
-                          <Button variant="ghost" onClick={() => completeMaintenance(m.id, s.id)}>
-                            Mark completed
-                          </Button>
-                        )}
-                      </li>
-                    ))}
-                    {maintenance.length === 0 && <EmptyState>No maintenance tickets.</EmptyState>}
-                  </ul>
-                  <form onSubmit={(e) => createMaintenance(s.id, e)} className="flex flex-wrap gap-2">
-                    <Select value={maintenanceConnectorId} onChange={(e) => setMaintenanceConnectorId(Number(e.target.value))}>
-                      <option value="">Connector…</option>
-                      {s.chargers.flatMap((c) => c.connectors).map((con) => (
-                        <option key={con.id} value={con.id}>
-                          #{con.id}
-                        </option>
+                  {activeTab === "bookings" && (
+                    <ul className="space-y-1.5">
+                      {bookings.map((b) => (
+                        <li key={b.id} className="text-slate-600 flex items-center gap-2 text-sm bg-slate-50 rounded-lg p-2.5">
+                          Connector #{b.connector_id} — {new Date(b.start_time).toLocaleString()} <Badge status={b.status} />
+                        </li>
                       ))}
-                    </Select>
-                    <Select value={maintenanceTechId} onChange={(e) => setMaintenanceTechId(Number(e.target.value))}>
-                      <option value="">Technician…</option>
-                      {technicians.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </Select>
-                    <Input
-                      placeholder="Issue description"
-                      className="flex-1 min-w-[160px]"
-                      value={maintenanceIssue}
-                      onChange={(e) => setMaintenanceIssue(e.target.value)}
-                    />
-                    <Button type="submit" variant="secondary">
-                      Open ticket
-                    </Button>
-                  </form>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium mb-1">Bookings</p>
-                  <ul className="space-y-1 text-sm">
-                    {bookings.map((b) => (
-                      <li key={b.id} className="text-slate-600 flex items-center gap-2">
-                        Connector #{b.connector_id} — {new Date(b.start_time).toLocaleString()} <Badge status={b.status} />
-                      </li>
-                    ))}
-                    {bookings.length === 0 && <EmptyState>No bookings.</EmptyState>}
-                  </ul>
+                      {bookings.length === 0 && <EmptyState icon={Calendar}>No bookings.</EmptyState>}
+                    </ul>
+                  )}
                 </div>
               </div>
             )}
           </Card>
         ))}
-        {stations.length === 0 && <EmptyState>No stations yet — create one above.</EmptyState>}
+        {stations.length === 0 && (
+          <EmptyState icon={Building2}>No stations yet — create one above.</EmptyState>
+        )}
       </ul>
     </div>
   );

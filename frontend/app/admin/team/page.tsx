@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { UserCog, UserPlus } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
 import { TeamAdmin } from "@/lib/admin-types";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function TeamPage() {
@@ -62,8 +63,12 @@ function TeamContent() {
       <ul className="space-y-2">
         {team.map((member) => (
           <Card key={member.id} className="p-3 flex items-center justify-between text-sm">
-            <span>
-              <span className="font-medium">{member.name}</span> — {member.email}
+            <span className="flex items-center gap-3">
+              <IconTile icon={UserCog} tone={member.role === "super_admin" ? "amber" : "indigo"} />
+              <span>
+                <span className="font-medium block">{member.name}</span>
+                <span className="text-slate-500">{member.email}</span>
+              </span>
             </span>
             <div className="flex items-center gap-2">
               <Badge status={member.role} />
@@ -71,38 +76,44 @@ function TeamContent() {
             </div>
           </Card>
         ))}
-        {team.length === 0 && <EmptyState>No team members yet.</EmptyState>}
+        {team.length === 0 && <EmptyState icon={UserCog}>No team members yet.</EmptyState>}
       </ul>
 
       {canManage ? (
-        <Card className="p-4 max-w-md">
-          <h2 className="font-medium text-sm mb-3">Add a team member</h2>
+        <Card className="p-5 max-w-md">
+          <h2 className="font-medium text-sm text-slate-900 mb-3">Add a team member</h2>
           <form onSubmit={addMember} className="space-y-3">
-            <Input placeholder="Full name" className="w-full" value={name} onChange={(e) => setName(e.target.value)} required />
-            <Input
-              type="email"
-              placeholder="Email"
-              className="w-full"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <Input
-              type="password"
-              placeholder="Temporary password"
-              className="w-full"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-            <Select className="w-full" value={role} onChange={(e) => setRole(e.target.value)}>
-              <option value="station_manager">Station manager</option>
-              <option value="finance_manager">Finance manager</option>
-              <option value="super_admin">Super admin</option>
-            </Select>
-            <Button type="submit" className="w-full">
-              Add team member
+            <Field label="Full name">
+              <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} required />
+            </Field>
+            <Field label="Email">
+              <Input
+                type="email"
+                className="w-full"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Temporary password">
+              <Input
+                type="password"
+                className="w-full"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </Field>
+            <Field label="Role">
+              <Select className="w-full" value={role} onChange={(e) => setRole(e.target.value)}>
+                <option value="station_manager">Station manager</option>
+                <option value="finance_manager">Finance manager</option>
+                <option value="super_admin">Super admin</option>
+              </Select>
+            </Field>
+            <Button type="submit" className="w-full justify-center">
+              <UserPlus size={15} /> Add team member
             </Button>
           </form>
         </Card>

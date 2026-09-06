@@ -107,6 +107,7 @@ class ConnectorOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     connector_type_id: int
+    connector_type_name: str
     max_power_kw: Decimal
     status: str
 

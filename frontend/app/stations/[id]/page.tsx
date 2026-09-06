@@ -3,10 +3,24 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Clock, MessageSquare, Play, Plug, Tag, UserCircle2, Zap } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
-import { isLoggedIn } from "@/lib/auth";
+import { getRole, isLoggedIn } from "@/lib/auth";
 import { Review, Station, Vehicle, VehicleModel } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, StarRating } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  IconTile,
+  Input,
+  PageHeader,
+  Select,
+  Skeleton,
+  StarRating,
+} from "@/components/ui";
 
 const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -25,27 +39,31 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [isDriver, setIsDriver] = useState(false);
 
-  async function load(loggedInNow: boolean) {
-    const [s, v, m, r] = await Promise.all([
-      apiFetch<Station>(`/stations/${id}`),
-      loggedInNow ? apiFetch<Vehicle[]>("/users/me/vehicles") : Promise.resolve([]),
-      loggedInNow ? apiFetch<VehicleModel[]>("/vehicle-models") : Promise.resolve([]),
-      apiFetch<Review[]>(`/stations/${id}/reviews`),
-    ]);
-    setStation(s);
-    setVehicles(v);
-    setModels(m);
-    setReviews(r);
-    const active = v.filter((vehicle) => vehicle.vehicle_status === "active");
-    if (active.length > 0) setVehicleId(active[0].id);
+  async function load(driverNow: boolean) {
+    try {
+      const [s, v, m, r] = await Promise.all([
+        apiFetch<Station>(`/stations/${id}`),
+        driverNow ? apiFetch<Vehicle[]>("/users/me/vehicles") : Promise.resolve([]),
+        driverNow ? apiFetch<VehicleModel[]>("/vehicle-models") : Promise.resolve([]),
+        apiFetch<Review[]>(`/stations/${id}/reviews`),
+      ]);
+      setStation(s);
+      setVehicles(v);
+      setModels(m);
+      setReviews(r);
+      const active = v.filter((vehicle) => vehicle.vehicle_status === "active");
+      if (active.length > 0) setVehicleId(active[0].id);
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Failed to load this station" });
+    }
   }
 
   useEffect(() => {
-    const loggedInNow = isLoggedIn();
-    setLoggedIn(loggedInNow);
-    load(loggedInNow);
+    const driverNow = isLoggedIn() && getRole() === "driver";
+    setIsDriver(driverNow);
+    load(driverNow);
   }, [id]);
 
   const activeVehicles = vehicles.filter((v) => v.vehicle_status === "active");
@@ -109,38 +127,57 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
     }
   }
 
-  if (!station) return <EmptyState>Loading…</EmptyState>;
+  if (!station) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-96" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  }
 
   const sortedHours = [...station.operating_hours].sort(
     (a, b) => DAY_ORDER.indexOf(a.day_of_week) - DAY_ORDER.indexOf(b.day_of_week)
   );
   const avgRating = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : null;
+  const today = DAY_ORDER[(new Date().getDay() + 6) % 7];
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={station.station_name}
-        subtitle={`${station.location.address_line}, ${station.location.city}, ${station.location.state}`}
-      />
+      <div className="flex items-start gap-4">
+        <IconTile icon={Zap} tone="indigo" />
+        <div className="flex-1">
+          <PageHeader
+            title={station.station_name}
+            subtitle={`${station.location.address_line}, ${station.location.city}, ${station.location.state}`}
+          />
+        </div>
+      </div>
 
-      <div className="flex flex-wrap gap-4 text-sm text-slate-600">
-        {station.tariff && <span>₹{station.tariff.price_per_kwh} / kWh</span>}
+      <div className="flex flex-wrap gap-4 -mt-4">
+        {station.tariff && (
+          <span className="flex items-center gap-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1">
+            <Tag size={13} className="text-slate-400" />₹{station.tariff.price_per_kwh} / kWh
+          </span>
+        )}
         {avgRating !== null && (
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1">
             <StarRating rating={Math.round(avgRating)} /> {avgRating.toFixed(1)} ({reviews.length})
           </span>
         )}
       </div>
 
-      {!loggedIn && (
+      {!isDriver && (
         <Alert type="error">
           <Link href="/login" className="underline">
-            Log in
+            Log in as a driver
           </Link>{" "}
           to book a connector or start charging here.
         </Alert>
       )}
-      {loggedIn && activeVehicles.length === 0 && (
+      {isDriver && activeVehicles.length === 0 && (
         <Alert type="error">
           Add or reactivate a vehicle before booking or charging —{" "}
           <Link href="/vehicles" className="underline">
@@ -152,40 +189,48 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
       {message && <Alert type={message.type}>{message.text}</Alert>}
 
       {activeVehicles.length > 1 && (
-        <label className="block text-sm text-slate-600">
-          Charging as
-          <Select
-            className="block mt-1"
-            value={vehicleId}
-            onChange={(e) => setVehicleId(Number(e.target.value))}
-          >
-            {activeVehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {vehicleLabel(v)}
-              </option>
-            ))}
-          </Select>
-        </label>
+        <Card className="p-3 max-w-sm">
+          <Field label="Charging as">
+            <Select className="w-full" value={vehicleId} onChange={(e) => setVehicleId(Number(e.target.value))}>
+              {activeVehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {vehicleLabel(v)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </Card>
       )}
 
       <div className="space-y-4">
         {station.chargers.map((charger) => (
           <Card key={charger.id} className="p-4">
-            <p className="font-medium text-sm text-slate-900">
-              {charger.charger_model ?? "Charger"} — {charger.power_capacity_kw} kW
-            </p>
-            <ul className="mt-2 space-y-2">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                <Plug size={15} className="text-slate-500" />
+              </div>
+              <p className="font-medium text-sm text-slate-900">
+                {charger.charger_model ?? "Charger"} <span className="text-slate-400 font-normal">· {charger.power_capacity_kw} kW</span>
+              </p>
+            </div>
+            <ul className="space-y-2">
               {charger.connectors.map((connector) => (
-                <li key={connector.id} className="flex items-center justify-between text-sm border-t border-slate-100 pt-2">
-                  <span className="flex items-center gap-2">
-                    Connector #{connector.id} — {connector.max_power_kw} kW
+                <li
+                  key={connector.id}
+                  className="flex flex-wrap items-center justify-between gap-2 text-sm border-t border-slate-100 pt-2.5"
+                >
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-slate-700">{connector.connector_type_name}</span>
+                    <span className="text-slate-400">#{connector.id} · {connector.max_power_kw} kW</span>
                     <Badge status={connector.status} />
                   </span>
                   {connector.status === "available" && activeVehicles.length > 0 && (
                     <div className="flex gap-2">
-                      <Button onClick={() => startWalkIn(connector.id)}>Start now</Button>
-                      <Button variant="secondary" onClick={() => setBookingConnectorId(connector.id)}>
-                        Book for later
+                      <Button size="sm" onClick={() => startWalkIn(connector.id)}>
+                        <Play size={12} /> Start now
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => setBookingConnectorId(connector.id)}>
+                        <Clock size={12} /> Book for later
                       </Button>
                     </div>
                   )}
@@ -194,27 +239,18 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
             </ul>
 
             {bookingConnectorId !== null && charger.connectors.some((c) => c.id === bookingConnectorId) && (
-              <form onSubmit={submitBooking} className="mt-3 flex flex-wrap items-end gap-2 bg-slate-50 p-3 rounded-md">
-                <label className="text-xs text-slate-600">
-                  Start
+              <form onSubmit={submitBooking} className="mt-3 flex flex-wrap items-end gap-3 bg-slate-50 p-3 rounded-lg">
+                <Field label="Start">
                   <Input
                     type="datetime-local"
                     required
-                    className="block mt-1"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
                   />
-                </label>
-                <label className="text-xs text-slate-600">
-                  End
-                  <Input
-                    type="datetime-local"
-                    required
-                    className="block mt-1"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                  />
-                </label>
+                </Field>
+                <Field label="End">
+                  <Input type="datetime-local" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                </Field>
                 <Button type="submit">Confirm booking</Button>
               </form>
             )}
@@ -224,10 +260,16 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
 
       {sortedHours.length > 0 && (
         <Card className="p-4">
-          <p className="font-medium text-sm text-slate-900 mb-2">Operating Hours</p>
-          <ul className="text-sm text-slate-600 grid grid-cols-2 sm:grid-cols-4 gap-1">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock size={15} className="text-slate-400" />
+            <p className="font-medium text-sm text-slate-900">Operating Hours</p>
+          </div>
+          <ul className="text-sm text-slate-600 grid grid-cols-2 sm:grid-cols-4 gap-2">
             {sortedHours.map((h) => (
-              <li key={h.id}>
+              <li
+                key={h.id}
+                className={`rounded-lg px-2 py-1 ${h.day_of_week === today ? "bg-indigo-50 text-indigo-700 font-medium" : ""}`}
+              >
                 {h.day_of_week.slice(0, 3)}: {h.opening_time.slice(0, 5)}–{h.closing_time.slice(0, 5)}
               </li>
             ))}
@@ -236,35 +278,36 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
       )}
 
       <Card className="p-4">
-        <p className="font-medium text-sm text-slate-900 mb-3">Reviews</p>
+        <div className="flex items-center gap-2 mb-3">
+          <MessageSquare size={15} className="text-slate-400" />
+          <p className="font-medium text-sm text-slate-900">Reviews</p>
+        </div>
         <ul className="space-y-3 mb-4">
           {reviews.map((r) => (
-            <li key={r.id} className="text-sm border-b border-slate-100 pb-2 last:border-0">
-              <div className="flex items-center gap-2">
-                <StarRating rating={r.rating} />
-                {r.is_verified && <span className="text-xs text-green-700">Verified visit</span>}
+            <li key={r.id} className="flex gap-3 text-sm border-b border-slate-100 pb-3 last:border-0">
+              <UserCircle2 size={28} className="text-slate-300 shrink-0" strokeWidth={1.5} />
+              <div>
+                <div className="flex items-center gap-2">
+                  <StarRating rating={r.rating} />
+                  {r.is_verified && <span className="text-xs text-emerald-700 font-medium">Verified visit</span>}
+                </div>
+                {r.comment && <p className="text-slate-600 mt-0.5">{r.comment}</p>}
               </div>
-              {r.comment && <p className="text-slate-600 mt-1">{r.comment}</p>}
             </li>
           ))}
-          {reviews.length === 0 && <EmptyState>No reviews yet.</EmptyState>}
+          {reviews.length === 0 && <EmptyState icon={MessageSquare}>No reviews yet.</EmptyState>}
         </ul>
-        {loggedIn ? (
+        {isDriver ? (
           <form onSubmit={submitReview} className="flex flex-wrap items-end gap-2">
-            <label className="text-xs text-slate-600">
-              Rating
-              <select
-                className="block mt-1 border border-slate-300 rounded-md px-2 py-2 text-sm"
-                value={reviewRating}
-                onChange={(e) => setReviewRating(Number(e.target.value))}
-              >
+            <Field label="Rating">
+              <Select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))}>
                 {[5, 4, 3, 2, 1].map((n) => (
                   <option key={n} value={n}>
                     {n} star{n > 1 ? "s" : ""}
                   </option>
                 ))}
-              </select>
-            </label>
+              </Select>
+            </Field>
             <Input
               placeholder="Optional comment"
               className="flex-1 min-w-[180px]"
@@ -278,7 +321,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
         ) : (
           <p className="text-sm text-slate-500">
             <Link href="/login" className="underline">
-              Log in
+              Log in as a driver
             </Link>{" "}
             to leave a review.
           </p>

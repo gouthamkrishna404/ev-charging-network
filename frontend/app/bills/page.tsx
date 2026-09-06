@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CreditCard, Receipt, RotateCcw } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Bill } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader } from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, IconTile, Input, PageHeader } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function BillsPage() {
@@ -71,33 +72,36 @@ function BillsContent() {
       <ul className="space-y-3">
         {bills.map((bill) => (
           <Card key={bill.id} className="p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="text-sm">
-                <p>
+            <div className="flex items-start gap-3">
+              <IconTile icon={Receipt} tone={bill.payment ? "slate" : "amber"} />
+              <div className="flex-1 min-w-0 text-sm">
+                <p className="text-slate-900">
                   Session #{bill.session_id} — energy ₹{bill.energy_charge}
                   {Number(bill.subscription_discount) > 0 && <> − discount ₹{bill.subscription_discount}</>} + tax ₹
-                  {bill.tax_amount} = <span className="font-medium">₹{bill.total_amount}</span>
+                  {bill.tax_amount} = <span className="font-semibold">₹{bill.total_amount}</span>
                 </p>
-                <p className="text-slate-500 text-xs mt-0.5">{new Date(bill.generated_date).toLocaleString()}</p>
+                <p className="text-slate-400 text-xs mt-0.5">{new Date(bill.generated_date).toLocaleString()}</p>
               </div>
-              <div className="flex flex-col items-end gap-1">
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
                 {bill.payment ? (
                   <>
                     <Badge status={bill.payment.payment_status} />
                     {bill.payment.refund && <Badge status={bill.payment.refund.status} />}
                     {bill.payment.payment_status === "successful" && !bill.payment.refund && (
-                      <Button variant="ghost" onClick={() => setRefundFormOpenFor(bill.payment!.id)}>
-                        Request refund
+                      <Button variant="ghost" size="sm" onClick={() => setRefundFormOpenFor(bill.payment!.id)}>
+                        <RotateCcw size={12} /> Request refund
                       </Button>
                     )}
                   </>
                 ) : (
-                  <Button onClick={() => pay(bill.id)}>Pay now</Button>
+                  <Button size="sm" onClick={() => pay(bill.id)}>
+                    <CreditCard size={12} /> Pay now
+                  </Button>
                 )}
               </div>
             </div>
             {refundFormOpenFor === bill.payment?.id && (
-              <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
+              <div className="mt-3 pl-[52px] flex gap-2 border-t border-slate-100 pt-3">
                 <Input
                   placeholder="Reason for refund"
                   className="flex-1"
@@ -109,7 +113,9 @@ function BillsContent() {
             )}
           </Card>
         ))}
-        {bills.length === 0 && <EmptyState>No bills yet — they appear automatically once you end a charging session.</EmptyState>}
+        {bills.length === 0 && (
+          <EmptyState icon={Receipt}>No bills yet — they appear automatically once you end a charging session.</EmptyState>
+        )}
       </ul>
     </div>
   );

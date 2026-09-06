@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import Charger, ChargingStation
+from app.models import Charger, ChargingStation, Connector
 from app.schemas import StationOut
 
 router = APIRouter(prefix="/stations", tags=["stations"])
@@ -13,7 +13,9 @@ def _station_query(db: Session):
         joinedload(ChargingStation.location),
         joinedload(ChargingStation.tariff),
         joinedload(ChargingStation.operating_hours),
-        joinedload(ChargingStation.chargers).joinedload(Charger.connectors),
+        joinedload(ChargingStation.chargers)
+        .joinedload(Charger.connectors)
+        .joinedload(Connector.connector_type),
     )
 
 
