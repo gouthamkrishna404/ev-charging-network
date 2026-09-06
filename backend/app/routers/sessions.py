@@ -31,6 +31,8 @@ def start_session(
     vehicle = db.get(Vehicle, payload.vehicle_id)
     if vehicle is None or vehicle.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
+    if vehicle.vehicle_status != "active":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This vehicle is deactivated")
 
     check_connector_compatible(db, vehicle, connector)
 

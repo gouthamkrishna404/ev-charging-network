@@ -58,3 +58,22 @@ def subscribe(
     db.commit()
     db.refresh(subscription)
     return subscription
+
+
+@router.post("/subscriptions/{subscription_id}/cancel", response_model=SubscriptionOut)
+def cancel_subscription(
+    subscription_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    subscription = db.get(Subscription, subscription_id)
+    if subscription is None or subscription.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    if subscription.status != "active":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only an active subscription can be cancelled")
+
+    subscription.status = "cancelled"
+    subscription.auto_renew = False
+    db.commit()
+    db.refresh(subscription)
+    return subscription

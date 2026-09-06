@@ -5,8 +5,8 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isLoggedIn } from "@/lib/auth";
-import { Review, Station, Vehicle } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, StarRating } from "@/components/ui";
+import { Review, Station, Vehicle, VehicleModel } from "@/lib/types";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, StarRating } from "@/components/ui";
 
 const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -16,6 +16,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
 
   const [station, setStation] = useState<Station | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [models, setModels] = useState<VehicleModel[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [vehicleId, setVehicleId] = useState<number | "">("");
   const [bookingConnectorId, setBookingConnectorId] = useState<number | null>(null);
@@ -28,20 +29,30 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   const loggedIn = isLoggedIn();
 
   async function load() {
-    const [s, v, r] = await Promise.all([
+    const [s, v, m, r] = await Promise.all([
       apiFetch<Station>(`/stations/${id}`),
       loggedIn ? apiFetch<Vehicle[]>("/users/me/vehicles") : Promise.resolve([]),
+      loggedIn ? apiFetch<VehicleModel[]>("/vehicle-models") : Promise.resolve([]),
       apiFetch<Review[]>(`/stations/${id}/reviews`),
     ]);
     setStation(s);
     setVehicles(v);
+    setModels(m);
     setReviews(r);
-    if (v.length > 0) setVehicleId(v[0].id);
+    const active = v.filter((vehicle) => vehicle.vehicle_status === "active");
+    if (active.length > 0) setVehicleId(active[0].id);
   }
 
   useEffect(() => {
     load();
   }, [id]);
+
+  const activeVehicles = vehicles.filter((v) => v.vehicle_status === "active");
+
+  function vehicleLabel(v: Vehicle) {
+    const model = models.find((m) => m.id === v.model_id);
+    return `${model ? `${model.make} ${model.model_name}` : "Vehicle"} — ${v.registration_number}`;
+  }
 
   async function startWalkIn(connectorId: number) {
     setMessage(null);
@@ -128,9 +139,9 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
           to book a connector or start charging here.
         </Alert>
       )}
-      {loggedIn && vehicles.length === 0 && (
+      {loggedIn && activeVehicles.length === 0 && (
         <Alert type="error">
-          Add a vehicle before booking or charging —{" "}
+          Add or reactivate a vehicle before booking or charging —{" "}
           <Link href="/vehicles" className="underline">
             go to My Vehicles
           </Link>
@@ -138,6 +149,23 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
         </Alert>
       )}
       {message && <Alert type={message.type}>{message.text}</Alert>}
+
+      {activeVehicles.length > 1 && (
+        <label className="block text-sm text-slate-600">
+          Charging as
+          <Select
+            className="block mt-1"
+            value={vehicleId}
+            onChange={(e) => setVehicleId(Number(e.target.value))}
+          >
+            {activeVehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {vehicleLabel(v)}
+              </option>
+            ))}
+          </Select>
+        </label>
+      )}
 
       <div className="space-y-4">
         {station.chargers.map((charger) => (
@@ -152,7 +180,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
                     Connector #{connector.id} — {connector.max_power_kw} kW
                     <Badge status={connector.status} />
                   </span>
-                  {connector.status === "available" && vehicles.length > 0 && (
+                  {connector.status === "available" && activeVehicles.length > 0 && (
                     <div className="flex gap-2">
                       <Button onClick={() => startWalkIn(connector.id)}>Start now</Button>
                       <Button variant="secondary" onClick={() => setBookingConnectorId(connector.id)}>

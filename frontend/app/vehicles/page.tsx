@@ -47,6 +47,17 @@ export default function VehiclesPage() {
     }
   }
 
+  async function toggleActive(vehicle: Vehicle) {
+    setError(null);
+    const action = vehicle.vehicle_status === "active" ? "deactivate" : "reactivate";
+    try {
+      await apiFetch(`/users/me/vehicles/${vehicle.id}/${action}`, { method: "POST" });
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Something went wrong");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -60,7 +71,12 @@ export default function VehiclesPage() {
             <span>
               <span className="font-medium">{modelLabel(v.model_id)}</span> — {v.registration_number}
             </span>
-            <Badge status={v.vehicle_status} />
+            <div className="flex items-center gap-2">
+              <Badge status={v.vehicle_status} />
+              <Button variant="ghost" onClick={() => toggleActive(v)}>
+                {v.vehicle_status === "active" ? "Deactivate" : "Reactivate"}
+              </Button>
+            </div>
           </Card>
         ))}
         {vehicles.length === 0 && (

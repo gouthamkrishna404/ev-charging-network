@@ -73,10 +73,12 @@ meter readings during a session, end a session, view/pay bills (with
 subscription discount applied automatically), request refunds, subscribe to
 a charging plan, and receive notifications on key events.
 
-**Admin**: create and manage stations/chargers/connectors/tariffs/operating
-hours, view bookings and revenue per station, open and resolve maintenance
-tickets against technicians, approve or reject refund requests, and see a
-full audit log of every admin action.
+**Admin**: register a new operator (self-serve, creates the operator's first
+super-admin), add teammates and assign them to specific stations, create and
+manage stations/chargers/connectors/tariffs/operating hours, view bookings
+and revenue per station, open and resolve maintenance tickets against
+technicians, approve or reject refund requests, and see a full audit log of
+every admin action.
 
 **Database-enforced concurrency control**: a PostgreSQL `EXCLUDE` constraint
 rejects overlapping bookings on the same connector — not an

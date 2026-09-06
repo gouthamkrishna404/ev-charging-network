@@ -56,6 +56,7 @@ class ChargingOperator(Base):
 
     stations = relationship("ChargingStation", back_populates="operator")
     admins = relationship("Admin", back_populates="operator")
+    technicians = relationship("Technician", back_populates="operator")
 
 
 class Admin(Base):
@@ -428,10 +429,12 @@ class Technician(Base):
     __tablename__ = "technicians"
 
     id = Column(Integer, primary_key=True)
+    operator_id = Column(Integer, ForeignKey("charging_operators.id"), nullable=False)
     name = Column(String(100), nullable=False)
     phone = Column(String(15))
     specialization = Column(String(50))
 
+    operator = relationship("ChargingOperator", back_populates="technicians")
     maintenance_tickets = relationship("Maintenance", back_populates="technician")
 
 

@@ -42,6 +42,14 @@ export interface AuditLogEntry {
   description: string | null;
 }
 
+export interface TeamAdmin {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
 export interface AdminRefund {
   id: number;
   payment_id: number;

@@ -43,3 +43,28 @@ def add_vehicle(
     db.commit()
     db.refresh(vehicle)
     return vehicle
+
+
+def _get_own_vehicle(vehicle_id: int, current_user: User, db: Session) -> Vehicle:
+    vehicle = db.get(Vehicle, vehicle_id)
+    if vehicle is None or vehicle.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
+    return vehicle
+
+
+@router.post("/users/me/vehicles/{vehicle_id}/deactivate", response_model=VehicleOut)
+def deactivate_vehicle(vehicle_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    vehicle = _get_own_vehicle(vehicle_id, current_user, db)
+    vehicle.vehicle_status = "inactive"
+    db.commit()
+    db.refresh(vehicle)
+    return vehicle
+
+
+@router.post("/users/me/vehicles/{vehicle_id}/reactivate", response_model=VehicleOut)
+def reactivate_vehicle(vehicle_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    vehicle = _get_own_vehicle(vehicle_id, current_user, db)
+    vehicle.vehicle_status = "active"
+    db.commit()
+    db.refresh(vehicle)
+    return vehicle

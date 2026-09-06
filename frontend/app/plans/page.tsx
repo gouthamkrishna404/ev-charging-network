@@ -43,6 +43,17 @@ export default function PlansPage() {
     }
   }
 
+  async function cancelSubscription(id: number) {
+    setMessage(null);
+    try {
+      await apiFetch(`/subscriptions/${id}/cancel`, { method: "POST" });
+      setMessage({ type: "success", text: "Subscription cancelled." });
+      await load();
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -52,11 +63,14 @@ export default function PlansPage() {
       {message && <Alert type={message.type}>{message.text}</Alert>}
 
       {activeSubscription && (
-        <div className="rounded-lg border border-slate-200 shadow-sm p-4 bg-slate-50">
+        <div className="rounded-lg border border-slate-200 shadow-sm p-4 bg-slate-50 flex items-center justify-between">
           <p className="text-sm">
             Active plan: <span className="font-medium">{plans.find((p) => p.id === activeSubscription.plan_id)?.plan_name}</span>{" "}
             until {activeSubscription.end_date} <Badge status={activeSubscription.status} />
           </p>
+          <Button variant="ghost" onClick={() => cancelSubscription(activeSubscription.id)}>
+            Cancel
+          </Button>
         </div>
       )}
 

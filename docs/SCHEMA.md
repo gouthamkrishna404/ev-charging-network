@@ -77,7 +77,12 @@ naming fixes applied throughout):
   it. Approval flips the payment to `refunded`.
 - **`maintenance_tickets` / `technicians`** — connector-level only (per the
   MVP scoping decision), opening a ticket takes the connector `out_of_service`
-  and completing it restores `available`.
+  and completing it restores `available`. `technicians.operator_id` was added
+  after the fact: the original draft (and this project's first pass) modeled
+  technicians as a single global pool, which meant one operator's admin could
+  see and assign another operator's field staff — a real multi-tenancy leak
+  in a marketplace with more than one operator. Scoped per-operator now, the
+  same way `admins` already were.
 - **`audit_logs`** — every admin mutation (creating a station/charger/
   connector, editing a tariff or hours, resolving a maintenance ticket or
   refund) writes one row here. It's a plain FK-based log, not a generic

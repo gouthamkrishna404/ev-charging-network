@@ -44,6 +44,8 @@ def create_booking(
     vehicle = db.get(Vehicle, payload.vehicle_id)
     if vehicle is None or vehicle.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
+    if vehicle.vehicle_status != "active":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This vehicle is deactivated")
 
     connector = db.get(Connector, payload.connector_id)
     if connector is None:

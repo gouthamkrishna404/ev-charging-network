@@ -43,6 +43,9 @@ export default function Nav() {
             <Link href="/admin/audit-log" className={linkClass("/admin/audit-log")}>
               Audit Log
             </Link>
+            <Link href="/admin/team" className={linkClass("/admin/team")}>
+              Team
+            </Link>
             <button onClick={handleLogout} className="ml-auto text-sm text-slate-500 hover:text-slate-900">
               Log out
             </button>

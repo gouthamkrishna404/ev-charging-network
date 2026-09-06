@@ -23,6 +23,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     role: str
+    admin_role: str | None = None
 
 
 class UserOut(BaseModel):
@@ -33,6 +34,31 @@ class UserOut(BaseModel):
     phone: str | None
     address: str | None
     account_status: str
+
+
+class OperatorRegister(BaseModel):
+    operator_name: str
+    contact_email: EmailStr
+    phone: str | None = None
+    admin_name: str
+    admin_email: EmailStr
+    admin_password: str
+
+
+class AdminOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    email: str
+    role: str
+    status: str
+
+
+class TeamAdminCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    role: str = "station_manager"
 
 
 # ---------- Vehicles ----------

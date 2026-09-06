@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.audit import log_action
-from app.auth import get_current_admin
+from app.auth import get_current_admin, hash_password
 from app.database import get_db
 from app.models import (
     Admin,
@@ -27,6 +27,7 @@ from app.models import (
 )
 from app.notifications import notify
 from app.schemas import (
+    AdminOut,
     AuditLogOut,
     BookingOut,
     ChargerCreate,
@@ -40,6 +41,7 @@ from app.schemas import (
     RefundOut,
     StationCreate,
     StationOut,
+    TeamAdminCreate,
     TechnicianCreate,
     TechnicianOut,
 )
@@ -55,6 +57,11 @@ def _managed_station_ids(admin: Admin, db: Session) -> list[int]:
 def _require_managed_station(station_id: int, admin: Admin, db: Session) -> None:
     if station_id not in _managed_station_ids(admin, db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not manage this station")
+
+
+def _require_super_admin(admin: Admin) -> None:
+    if admin.role != "super_admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only a super admin can do this")
 
 
 def _station_query(db: Session):
@@ -204,14 +211,14 @@ def station_revenue(station_id: int, admin: Admin = Depends(get_current_admin), 
 
 @router.get("/technicians", response_model=list[TechnicianOut])
 def list_technicians(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
-    return db.query(Technician).all()
+    return db.query(Technician).filter(Technician.operator_id == admin.operator_id).all()
 
 
 @router.post("/technicians", response_model=TechnicianOut, status_code=status.HTTP_201_CREATED)
 def create_technician(
     payload: TechnicianCreate, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)
 ):
-    technician = Technician(**payload.model_dump())
+    technician = Technician(operator_id=admin.operator_id, **payload.model_dump())
     db.add(technician)
     db.flush()
     log_action(db, admin, "Create", "technicians", technician.id, f"Added technician '{technician.name}'")
@@ -245,6 +252,10 @@ def create_maintenance(
     if connector is None or connector.charger.station_id != station_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Connector does not belong to this station")
 
+    technician = db.get(Technician, payload.technician_id)
+    if technician is None or technician.operator_id != admin.operator_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Technician not found")
+
     ticket = Maintenance(station_id=station_id, **payload.model_dump())
     connector.status = "out_of_service"
     db.add(ticket)
@@ -273,6 +284,94 @@ def complete_maintenance(
     db.commit()
     db.refresh(ticket)
     return ticket
+
+
+# ---------- Team (operator-wide admins) & per-station admin assignment ----------
+
+@router.get("/team", response_model=list[AdminOut])
+def list_team(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    return db.query(Admin).filter(Admin.operator_id == admin.operator_id).all()
+
+
+@router.post("/team", response_model=AdminOut, status_code=status.HTTP_201_CREATED)
+def add_team_member(
+    payload: TeamAdminCreate, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)
+):
+    _require_super_admin(admin)
+    if db.query(Admin).filter(Admin.email == payload.email).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+
+    new_admin = Admin(
+        operator_id=admin.operator_id,
+        name=payload.name,
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        role=payload.role,
+    )
+    db.add(new_admin)
+    db.flush()
+    log_action(db, admin, "Create", "admins", new_admin.id, f"Added team member '{new_admin.name}' ({new_admin.role})")
+    db.commit()
+    db.refresh(new_admin)
+    return new_admin
+
+
+@router.get("/stations/{station_id}/admins", response_model=list[AdminOut])
+def station_admins(station_id: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    _require_managed_station(station_id, admin, db)
+    return (
+        db.query(Admin)
+        .join(StationAdmin, StationAdmin.admin_id == Admin.id)
+        .filter(StationAdmin.station_id == station_id)
+        .all()
+    )
+
+
+@router.post("/stations/{station_id}/admins/{admin_id}", status_code=status.HTTP_201_CREATED)
+def assign_station_admin(
+    station_id: int, admin_id: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)
+):
+    _require_managed_station(station_id, admin, db)
+    _require_super_admin(admin)
+
+    target = db.get(Admin, admin_id)
+    if target is None or target.operator_id != admin.operator_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Admin not found")
+
+    existing = (
+        db.query(StationAdmin)
+        .filter(StationAdmin.station_id == station_id, StationAdmin.admin_id == admin_id)
+        .first()
+    )
+    if existing is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already manages this station")
+
+    db.add(StationAdmin(station_id=station_id, admin_id=admin_id))
+    log_action(db, admin, "Assign", "station_admins", station_id, f"Added '{target.name}' as a manager")
+    db.commit()
+    return {"station_id": station_id, "admin_id": admin_id}
+
+
+@router.delete("/stations/{station_id}/admins/{admin_id}", status_code=status.HTTP_204_NO_CONTENT)
+def unassign_station_admin(
+    station_id: int, admin_id: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)
+):
+    _require_managed_station(station_id, admin, db)
+    _require_super_admin(admin)
+
+    remaining = _managed_admin_count(station_id, db)
+    if remaining <= 1:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A station must keep at least one admin")
+
+    db.query(StationAdmin).filter(
+        StationAdmin.station_id == station_id, StationAdmin.admin_id == admin_id
+    ).delete()
+    log_action(db, admin, "Unassign", "station_admins", station_id, f"Removed admin #{admin_id} as a manager")
+    db.commit()
+
+
+def _managed_admin_count(station_id: int, db: Session) -> int:
+    return db.query(StationAdmin).filter(StationAdmin.station_id == station_id).count()
 
 
 # ---------- Refunds ----------

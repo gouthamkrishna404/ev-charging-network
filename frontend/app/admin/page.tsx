@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
+import { isSuperAdmin } from "@/lib/auth";
 import { ConnectorTypeOut, Station } from "@/lib/types";
-import { AdminBooking, Maintenance, Revenue, Technician } from "@/lib/admin-types";
+import { AdminBooking, Maintenance, Revenue, Technician, TeamAdmin } from "@/lib/admin-types";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/components/ui";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -16,7 +17,11 @@ export default function AdminPage() {
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [revenue, setRevenue] = useState<Revenue | null>(null);
   const [maintenance, setMaintenance] = useState<Maintenance[]>([]);
+  const [team, setTeam] = useState<TeamAdmin[]>([]);
+  const [stationAdmins, setStationAdmins] = useState<TeamAdmin[]>([]);
+  const [assignAdminId, setAssignAdminId] = useState<number | "">("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const canManageTeam = isSuperAdmin();
 
   // new station form
   const [showNewStation, setShowNewStation] = useState(false);
@@ -40,14 +45,16 @@ export default function AdminPage() {
 
   async function load() {
     try {
-      const [s, ct, tech] = await Promise.all([
+      const [s, ct, tech, tm] = await Promise.all([
         apiFetch<Station[]>("/admin/stations"),
         apiFetch<ConnectorTypeOut[]>("/connector-types"),
         apiFetch<Technician[]>("/admin/technicians"),
+        apiFetch<TeamAdmin[]>("/admin/team"),
       ]);
       setStations(s);
       setConnectorTypes(ct);
       setTechnicians(tech);
+      setTeam(tm);
     } catch (err) {
       setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Failed to load dashboard data" });
     }
@@ -78,14 +85,36 @@ export default function AdminPage() {
       );
       setHours(initHours);
     }
-    const [b, r, m] = await Promise.all([
+    const [b, r, m, sa] = await Promise.all([
       apiFetch<AdminBooking[]>(`/admin/stations/${stationId}/bookings`),
       apiFetch<Revenue>(`/admin/stations/${stationId}/revenue`),
       apiFetch<Maintenance[]>(`/admin/stations/${stationId}/maintenance`),
+      apiFetch<TeamAdmin[]>(`/admin/stations/${stationId}/admins`),
     ]);
     setBookings(b);
     setRevenue(r);
     setMaintenance(m);
+    setStationAdmins(sa);
+  }
+
+  async function assignAdmin(stationId: number) {
+    if (assignAdminId === "") return;
+    try {
+      await apiFetch(`/admin/stations/${stationId}/admins/${assignAdminId}`, { method: "POST" });
+      setAssignAdminId("");
+      setStationAdmins(await apiFetch<TeamAdmin[]>(`/admin/stations/${stationId}/admins`));
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+    }
+  }
+
+  async function unassignAdmin(stationId: number, adminId: number) {
+    try {
+      await apiFetch(`/admin/stations/${stationId}/admins/${adminId}`, { method: "DELETE" });
+      setStationAdmins(await apiFetch<TeamAdmin[]>(`/admin/stations/${stationId}/admins`));
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+    }
   }
 
   async function createStation(e: React.FormEvent) {
@@ -232,6 +261,41 @@ export default function AdminPage() {
                     Revenue: <span className="font-medium">₹{revenue.total_revenue}</span> from {revenue.completed_sessions} completed session(s)
                   </p>
                 )}
+
+                <div>
+                  <p className="text-sm font-medium mb-1">Managed by</p>
+                  <ul className="space-y-1 text-sm mb-2">
+                    {stationAdmins.map((a) => (
+                      <li key={a.id} className="flex items-center justify-between bg-slate-50 rounded-md p-2">
+                        <span className="flex items-center gap-2">
+                          {a.name} <Badge status={a.role} />
+                        </span>
+                        {canManageTeam && stationAdmins.length > 1 && (
+                          <Button variant="ghost" onClick={() => unassignAdmin(s.id, a.id)}>
+                            Remove
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  {canManageTeam && (
+                    <div className="flex gap-2">
+                      <Select value={assignAdminId} onChange={(e) => setAssignAdminId(Number(e.target.value))}>
+                        <option value="">Add admin…</option>
+                        {team
+                          .filter((t) => !stationAdmins.some((sa) => sa.id === t.id))
+                          .map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))}
+                      </Select>
+                      <Button variant="secondary" onClick={() => assignAdmin(s.id)}>
+                        Assign
+                      </Button>
+                    </div>
+                  )}
+                </div>
 
                 <div>
                   <p className="text-sm font-medium mb-1">Chargers & connectors</p>

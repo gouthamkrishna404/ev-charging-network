@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api";
+import Link from "next/link";
 import { saveSession } from "@/lib/auth";
 import { Alert, Button, Card, Input } from "@/components/ui";
 
 interface TokenResponse {
   access_token: string;
   role: string;
+  admin_role: string | null;
 }
 
 export default function LoginPage() {
@@ -27,7 +29,7 @@ export default function LoginPage() {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      saveSession(res.access_token, res.role);
+      saveSession(res.access_token, res.role, res.admin_role);
       router.push(res.role === "admin" ? "/admin" : "/stations");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong");
@@ -67,6 +69,12 @@ export default function LoginPage() {
         Demo driver: driver@example.com / Password123!
         <br />
         Demo admin: admin@voltgrid.example / Password123!
+      </p>
+      <p className="text-sm text-slate-500 mt-6 text-center">
+        Run a charging network?{" "}
+        <Link href="/register-operator" className="underline">
+          Register your operator account
+        </Link>
       </p>
     </div>
   );

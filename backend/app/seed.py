@@ -166,8 +166,12 @@ def run():
         db.add_all([basic_plan, premium_plan, fleet_plan])
         db.flush()
 
-        technician_electrical = Technician(name="Ravi Kumar", phone="9811111111", specialization="Electrical")
-        technician_network = Technician(name="Meena Iyer", phone="9822222222", specialization="Networking")
+        technician_electrical = Technician(
+            operator_id=operator.id, name="Ravi Kumar", phone="9811111111", specialization="Electrical"
+        )
+        technician_network = Technician(
+            operator_id=operator.id, name="Meena Iyer", phone="9822222222", specialization="Networking"
+        )
         db.add_all([technician_electrical, technician_network])
         db.flush()
 
