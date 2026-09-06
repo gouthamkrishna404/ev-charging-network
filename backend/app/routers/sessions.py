@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import Bill, Booking, ChargingSession, Connector, User, Vehicle
-from app.schemas import BillOut, SessionEnd, SessionOut, SessionStart
+from app.models import Bill, Booking, ChargingSession, Connector, MeterReading, Subscription, User, Vehicle
+from app.notifications import notify
+from app.schemas import BillOut, MeterReadingCreate, MeterReadingOut, SessionEnd, SessionOut, SessionStart
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -54,6 +55,18 @@ def start_session(
     return charging_session
 
 
+def _active_subscription(db: Session, user_id: int) -> Subscription | None:
+    return (
+        db.query(Subscription)
+        .filter(
+            Subscription.user_id == user_id,
+            Subscription.status == "active",
+            Subscription.end_date >= date.today(),
+        )
+        .first()
+    )
+
+
 @router.post("/{session_id}/end", response_model=BillOut)
 def end_session(
     session_id: int,
@@ -80,16 +93,30 @@ def end_session(
         charging_session.booking.status = "completed"
 
     energy_charge = (payload.energy_delivered_kwh * tariff.price_per_kwh).quantize(Decimal("0.01"))
-    tax_amount = (energy_charge * TAX_RATE).quantize(Decimal("0.01"))
-    total_amount = energy_charge + tax_amount
+
+    subscription = _active_subscription(db, current_user.id)
+    subscription_discount = Decimal("0.00")
+    if subscription is not None:
+        subscription_discount = (energy_charge * subscription.plan.discount_percentage / 100).quantize(Decimal("0.01"))
+
+    taxable_amount = energy_charge - subscription_discount
+    tax_amount = (taxable_amount * TAX_RATE).quantize(Decimal("0.01"))
+    total_amount = taxable_amount + tax_amount
 
     bill = Bill(
         session_id=charging_session.id,
         energy_charge=energy_charge,
+        subscription_discount=subscription_discount,
         tax_amount=tax_amount,
         total_amount=total_amount,
     )
     db.add(bill)
+    notify(
+        db,
+        current_user.id,
+        f"Session #{charging_session.id} ended — bill total ₹{total_amount}",
+        "Payment",
+    )
     db.commit()
     db.refresh(bill)
     return bill
@@ -103,3 +130,35 @@ def list_my_sessions(current_user: User = Depends(get_current_user), db: Session
         .order_by(ChargingSession.start_time.desc())
         .all()
     )
+
+
+@router.post("/{session_id}/readings", response_model=MeterReadingOut, status_code=status.HTTP_201_CREATED)
+def add_meter_reading(
+    session_id: int,
+    payload: MeterReadingCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    charging_session = db.get(ChargingSession, session_id)
+    if charging_session is None or charging_session.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    if charging_session.session_status != "charging":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Session is not currently active")
+
+    reading = MeterReading(session_id=session_id, **payload.model_dump())
+    db.add(reading)
+    db.commit()
+    db.refresh(reading)
+    return reading
+
+
+@router.get("/{session_id}/readings", response_model=list[MeterReadingOut])
+def list_meter_readings(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    charging_session = db.get(ChargingSession, session_id)
+    if charging_session is None or charging_session.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    return charging_session.meter_readings

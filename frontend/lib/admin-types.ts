@@ -12,3 +12,41 @@ export interface Revenue {
   total_revenue: string;
   completed_sessions: number;
 }
+
+export interface Technician {
+  id: number;
+  name: string;
+  phone: string | null;
+  specialization: string | null;
+}
+
+export interface Maintenance {
+  id: number;
+  station_id: number;
+  connector_id: number;
+  technician_id: number;
+  issue_description: string;
+  priority: string;
+  scheduled_date: string;
+  completed_date: string | null;
+  status: string;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  admin_id: number;
+  action: string;
+  table_affected: string;
+  record_id: number;
+  timestamp: string;
+  description: string | null;
+}
+
+export interface AdminRefund {
+  id: number;
+  payment_id: number;
+  amount: string;
+  reason: string;
+  refund_date: string;
+  status: string;
+}

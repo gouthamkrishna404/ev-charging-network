@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api";
+import { Alert, Button, Card, Input } from "@/components/ui";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -31,48 +32,40 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="max-w-sm mx-auto space-y-4">
-      <h1 className="text-xl font-semibold">Create your driver account</h1>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <input
-          placeholder="Full name"
-          className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-        />
-        <input
-          placeholder="Phone (optional)"
-          className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded bg-slate-900 text-white px-4 py-2 text-sm disabled:opacity-50"
-        >
-          {loading ? "Creating account..." : "Register"}
-        </button>
-      </form>
+    <div className="max-w-sm mx-auto">
+      <h1 className="text-xl font-semibold mb-4 text-center">Create your driver account</h1>
+      <Card className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <Input placeholder="Full name" className="w-full" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Input
+            type="email"
+            placeholder="Email"
+            className="w-full"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <Input
+            type="password"
+            placeholder="Password"
+            className="w-full"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+          />
+          <Input
+            placeholder="Phone (optional)"
+            className="w-full"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+          {error && <Alert type="error">{error}</Alert>}
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Creating account..." : "Register"}
+          </Button>
+        </form>
+      </Card>
     </div>
   );
 }

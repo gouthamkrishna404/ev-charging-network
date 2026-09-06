@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearSession, getRole, isLoggedIn } from "@/lib/auth";
+import NotificationBell from "./NotificationBell";
 
 export default function Nav() {
   const router = useRouter();
@@ -22,39 +23,54 @@ export default function Nav() {
     router.push("/login");
   }
 
+  const linkClass = (href: string) =>
+    `text-sm transition-colors ${pathname === href ? "text-slate-900 font-medium" : "text-slate-500 hover:text-slate-900"}`;
+
   return (
-    <nav className="border-b border-slate-200 bg-white">
+    <nav className="border-b border-slate-200 bg-white sticky top-0 z-10">
       <div className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-6">
-        <Link href="/" className="font-semibold">
-          EV Charging Network
+        <Link href="/" className="font-semibold text-slate-900">
+          ⚡ Volt Grid
         </Link>
         {loggedIn && role === "admin" && (
           <>
-            <Link href="/admin" className="text-sm text-slate-600 hover:text-slate-900">
+            <Link href="/admin" className={linkClass("/admin")}>
               My Stations
             </Link>
-            <button onClick={handleLogout} className="ml-auto text-sm text-slate-600 hover:text-slate-900">
+            <Link href="/admin/refunds" className={linkClass("/admin/refunds")}>
+              Refunds
+            </Link>
+            <Link href="/admin/audit-log" className={linkClass("/admin/audit-log")}>
+              Audit Log
+            </Link>
+            <button onClick={handleLogout} className="ml-auto text-sm text-slate-500 hover:text-slate-900">
               Log out
             </button>
           </>
         )}
         {loggedIn && role === "driver" && (
           <>
-            <Link href="/stations" className="text-sm text-slate-600 hover:text-slate-900">
+            <Link href="/stations" className={linkClass("/stations")}>
               Stations
             </Link>
-            <Link href="/vehicles" className="text-sm text-slate-600 hover:text-slate-900">
-              My Vehicles
+            <Link href="/vehicles" className={linkClass("/vehicles")}>
+              Vehicles
             </Link>
-            <Link href="/bookings" className="text-sm text-slate-600 hover:text-slate-900">
-              My Bookings
+            <Link href="/bookings" className={linkClass("/bookings")}>
+              Bookings
             </Link>
-            <Link href="/bills" className="text-sm text-slate-600 hover:text-slate-900">
-              My Bills
+            <Link href="/bills" className={linkClass("/bills")}>
+              Bills
             </Link>
-            <button onClick={handleLogout} className="ml-auto text-sm text-slate-600 hover:text-slate-900">
-              Log out
-            </button>
+            <Link href="/plans" className={linkClass("/plans")}>
+              Plans
+            </Link>
+            <div className="ml-auto flex items-center gap-4">
+              <NotificationBell />
+              <button onClick={handleLogout} className="text-sm text-slate-500 hover:text-slate-900">
+                Log out
+              </button>
+            </div>
           </>
         )}
         {!loggedIn && (

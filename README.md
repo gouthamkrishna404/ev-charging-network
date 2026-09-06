@@ -65,15 +65,22 @@ App at http://localhost:3000.
 - Driver: `driver@example.com` / `Password123!`
 - Admin: `admin@voltgrid.example` / `Password123!`
 
-## What's implemented (MVP scope)
+## What's implemented
 
-- Driver: register/login, manage vehicles, browse stations, book a connector
-  or start a walk-in session, end a session, view bills, pay.
-- Admin: view managed stations, their bookings, and revenue.
-- Database-enforced concurrency control: a PostgreSQL `EXCLUDE` constraint
-  rejects overlapping bookings on the same connector — not an
-  application-level check, so it holds up under concurrent requests.
+**Driver**: register/login, manage vehicles, browse stations (with operating
+hours and reviews), book a connector or start a walk-in session, watch live
+meter readings during a session, end a session, view/pay bills (with
+subscription discount applied automatically), request refunds, subscribe to
+a charging plan, and receive notifications on key events.
 
-Deferred to later iterations: subscriptions/plans, meter-reading time series,
-notifications, station reviews, refunds, maintenance/technician tracking,
-audit logging. See `docs/SCHEMA.md` for the full reasoning.
+**Admin**: create and manage stations/chargers/connectors/tariffs/operating
+hours, view bookings and revenue per station, open and resolve maintenance
+tickets against technicians, approve or reject refund requests, and see a
+full audit log of every admin action.
+
+**Database-enforced concurrency control**: a PostgreSQL `EXCLUDE` constraint
+rejects overlapping bookings on the same connector — not an
+application-level check, so it holds up under concurrent requests.
+
+See `docs/SCHEMA.md` for the full reasoning behind the schema, including
+which entities were added in the MVP pass vs. afterward.

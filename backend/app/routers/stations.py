@@ -12,6 +12,7 @@ def _station_query(db: Session):
     return db.query(ChargingStation).options(
         joinedload(ChargingStation.location),
         joinedload(ChargingStation.tariff),
+        joinedload(ChargingStation.operating_hours),
         joinedload(ChargingStation.chargers).joinedload(Charger.connectors),
     )
 

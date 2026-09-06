@@ -3,7 +3,10 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Station, Vehicle } from "@/lib/types";
+import { Review, Station, Vehicle } from "@/lib/types";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, StarRating } from "@/components/ui";
+
+const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   const { id } = use(props.params);
@@ -11,19 +14,24 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
 
   const [station, setStation] = useState<Station | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [vehicleId, setVehicleId] = useState<number | "">("");
   const [bookingConnectorId, setBookingConnectorId] = useState<number | null>(null);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   async function load() {
-    const [s, v] = await Promise.all([
+    const [s, v, r] = await Promise.all([
       apiFetch<Station>(`/stations/${id}`),
       apiFetch<Vehicle[]>("/users/me/vehicles"),
+      apiFetch<Review[]>(`/stations/${id}/reviews`),
     ]);
     setStation(s);
     setVehicles(v);
+    setReviews(r);
     if (v.length > 0) setVehicleId(v[0].id);
   }
 
@@ -42,7 +50,6 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
         method: "POST",
         body: JSON.stringify({ connector_id: connectorId, vehicle_id: vehicleId }),
       });
-      setMessage({ type: "success", text: "Session started. Manage it from My Bookings." });
       router.push("/bookings");
     } catch (err) {
       setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
@@ -70,59 +77,67 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
     }
   }
 
-  if (!station) return <p className="text-sm text-slate-500">Loading...</p>;
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage(null);
+    try {
+      await apiFetch(`/stations/${id}/reviews`, {
+        method: "POST",
+        body: JSON.stringify({ rating: reviewRating, comment: reviewComment || null }),
+      });
+      setReviewComment("");
+      const r = await apiFetch<Review[]>(`/stations/${id}/reviews`);
+      setReviews(r);
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+    }
+  }
+
+  if (!station) return <EmptyState>Loading…</EmptyState>;
+
+  const sortedHours = [...station.operating_hours].sort(
+    (a, b) => DAY_ORDER.indexOf(a.day_of_week) - DAY_ORDER.indexOf(b.day_of_week)
+  );
+  const avgRating = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : null;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">{station.station_name}</h1>
-        <p className="text-sm text-slate-600">
-          {station.location.address_line}, {station.location.city}, {station.location.state}
-        </p>
-        {station.tariff && <p className="text-sm text-slate-600">₹{station.tariff.price_per_kwh} / kWh</p>}
+      <PageHeader
+        title={station.station_name}
+        subtitle={`${station.location.address_line}, ${station.location.city}, ${station.location.state}`}
+      />
+
+      <div className="flex flex-wrap gap-4 text-sm text-slate-600">
+        {station.tariff && <span>₹{station.tariff.price_per_kwh} / kWh</span>}
+        {avgRating !== null && (
+          <span className="flex items-center gap-1">
+            <StarRating rating={Math.round(avgRating)} /> {avgRating.toFixed(1)} ({reviews.length})
+          </span>
+        )}
       </div>
 
-      {vehicles.length === 0 && (
-        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
-          You need to add a vehicle before booking or charging. Go to My Vehicles first.
-        </p>
-      )}
-
-      {message && (
-        <p className={`text-sm ${message.type === "error" ? "text-red-600" : "text-green-700"}`}>{message.text}</p>
-      )}
+      {vehicles.length === 0 && <Alert type="error">Add a vehicle before booking or charging — see My Vehicles.</Alert>}
+      {message && <Alert type={message.type}>{message.text}</Alert>}
 
       <div className="space-y-4">
         {station.chargers.map((charger) => (
-          <div key={charger.id} className="border border-slate-200 rounded p-4 bg-white">
-            <p className="font-medium text-sm">
-              {charger.charger_model ?? "Charger"} &mdash; {charger.power_capacity_kw} kW
+          <Card key={charger.id} className="p-4">
+            <p className="font-medium text-sm text-slate-900">
+              {charger.charger_model ?? "Charger"} — {charger.power_capacity_kw} kW
             </p>
             <ul className="mt-2 space-y-2">
               {charger.connectors.map((connector) => (
                 <li key={connector.id} className="flex items-center justify-between text-sm border-t border-slate-100 pt-2">
-                  <span>
-                    Connector #{connector.id} &mdash; {connector.max_power_kw} kW &mdash;{" "}
-                    <span
-                      className={connector.status === "available" ? "text-green-700" : "text-slate-500"}
-                    >
-                      {connector.status}
-                    </span>
+                  <span className="flex items-center gap-2">
+                    Connector #{connector.id} — {connector.max_power_kw} kW
+                    <Badge status={connector.status} />
                   </span>
                   {connector.status === "available" && vehicles.length > 0 && (
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => startWalkIn(connector.id)}
-                        className="rounded bg-slate-900 text-white px-3 py-1 text-xs"
-                      >
-                        Start now
-                      </button>
-                      <button
-                        onClick={() => setBookingConnectorId(connector.id)}
-                        className="rounded border border-slate-300 px-3 py-1 text-xs"
-                      >
+                      <Button onClick={() => startWalkIn(connector.id)}>Start now</Button>
+                      <Button variant="secondary" onClick={() => setBookingConnectorId(connector.id)}>
                         Book for later
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </li>
@@ -130,35 +145,87 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
             </ul>
 
             {bookingConnectorId !== null && charger.connectors.some((c) => c.id === bookingConnectorId) && (
-              <form onSubmit={submitBooking} className="mt-3 flex flex-wrap items-end gap-2 bg-slate-50 p-3 rounded">
-                <label className="text-xs">
+              <form onSubmit={submitBooking} className="mt-3 flex flex-wrap items-end gap-2 bg-slate-50 p-3 rounded-md">
+                <label className="text-xs text-slate-600">
                   Start
-                  <input
+                  <Input
                     type="datetime-local"
                     required
-                    className="block border border-slate-300 rounded px-2 py-1 text-sm"
+                    className="block mt-1"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
                   />
                 </label>
-                <label className="text-xs">
+                <label className="text-xs text-slate-600">
                   End
-                  <input
+                  <Input
                     type="datetime-local"
                     required
-                    className="block border border-slate-300 rounded px-2 py-1 text-sm"
+                    className="block mt-1"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
                   />
                 </label>
-                <button type="submit" className="rounded bg-slate-900 text-white px-3 py-2 text-xs">
-                  Confirm booking
-                </button>
+                <Button type="submit">Confirm booking</Button>
               </form>
             )}
-          </div>
+          </Card>
         ))}
       </div>
+
+      {sortedHours.length > 0 && (
+        <Card className="p-4">
+          <p className="font-medium text-sm text-slate-900 mb-2">Operating Hours</p>
+          <ul className="text-sm text-slate-600 grid grid-cols-2 sm:grid-cols-4 gap-1">
+            {sortedHours.map((h) => (
+              <li key={h.id}>
+                {h.day_of_week.slice(0, 3)}: {h.opening_time.slice(0, 5)}–{h.closing_time.slice(0, 5)}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <Card className="p-4">
+        <p className="font-medium text-sm text-slate-900 mb-3">Reviews</p>
+        <ul className="space-y-3 mb-4">
+          {reviews.map((r) => (
+            <li key={r.id} className="text-sm border-b border-slate-100 pb-2 last:border-0">
+              <div className="flex items-center gap-2">
+                <StarRating rating={r.rating} />
+                {r.is_verified && <span className="text-xs text-green-700">Verified visit</span>}
+              </div>
+              {r.comment && <p className="text-slate-600 mt-1">{r.comment}</p>}
+            </li>
+          ))}
+          {reviews.length === 0 && <EmptyState>No reviews yet.</EmptyState>}
+        </ul>
+        <form onSubmit={submitReview} className="flex flex-wrap items-end gap-2">
+          <label className="text-xs text-slate-600">
+            Rating
+            <select
+              className="block mt-1 border border-slate-300 rounded-md px-2 py-2 text-sm"
+              value={reviewRating}
+              onChange={(e) => setReviewRating(Number(e.target.value))}
+            >
+              {[5, 4, 3, 2, 1].map((n) => (
+                <option key={n} value={n}>
+                  {n} star{n > 1 ? "s" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Input
+            placeholder="Optional comment"
+            className="flex-1 min-w-[180px]"
+            value={reviewComment}
+            onChange={(e) => setReviewComment(e.target.value)}
+          />
+          <Button type="submit" variant="secondary">
+            Post review
+          </Button>
+        </form>
+      </Card>
     </div>
   );
 }

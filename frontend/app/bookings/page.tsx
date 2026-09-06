@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Booking, Session } from "@/lib/types";
+import { Booking, MeterReading, Session } from "@/lib/types";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader } from "@/components/ui";
+import Sparkline from "@/components/Sparkline";
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [readings, setReadings] = useState<Record<number, MeterReading[]>>({});
   const [energyBySession, setEnergyBySession] = useState<Record<number, string>>({});
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
@@ -18,6 +21,12 @@ export default function BookingsPage() {
     ]);
     setBookings(b);
     setSessions(s);
+
+    const charging = s.filter((session) => session.session_status === "charging");
+    const readingLists = await Promise.all(
+      charging.map((session) => apiFetch<MeterReading[]>(`/sessions/${session.id}/readings`))
+    );
+    setReadings(Object.fromEntries(charging.map((session, i) => [session.id, readingLists[i]])));
   }
 
   useEffect(() => {
@@ -51,6 +60,21 @@ export default function BookingsPage() {
     }
   }
 
+  async function simulateReading(sessionId: number) {
+    const previous = readings[sessionId] ?? [];
+    const lastEnergy = previous.length ? Number(previous[previous.length - 1].energy_reading_kwh) : 0;
+    const nextEnergy = (lastEnergy + 1.5 + Math.random() * 2).toFixed(3);
+    await apiFetch(`/sessions/${sessionId}/readings`, {
+      method: "POST",
+      body: JSON.stringify({
+        energy_reading_kwh: Number(nextEnergy),
+        power_output_kw: Math.round(30 + Math.random() * 60),
+      }),
+    });
+    const updated = await apiFetch<MeterReading[]>(`/sessions/${sessionId}/readings`);
+    setReadings((prev) => ({ ...prev, [sessionId]: updated }));
+  }
+
   async function endSession(sessionId: number) {
     setMessage(null);
     const energy = energyBySession[sessionId];
@@ -72,81 +96,82 @@ export default function BookingsPage() {
 
   return (
     <div className="space-y-8">
-      {message && (
-        <p className={`text-sm ${message.type === "error" ? "text-red-600" : "text-green-700"}`}>{message.text}</p>
-      )}
+      {message && <Alert type={message.type}>{message.text}</Alert>}
 
       <div>
-        <h1 className="text-xl font-semibold mb-3">My Sessions</h1>
-        <ul className="space-y-2">
+        <PageHeader title="My Sessions" />
+        <ul className="space-y-3">
           {sessions.map((s) => (
-            <li key={s.id} className="border border-slate-200 rounded p-3 bg-white text-sm">
+            <Card key={s.id} className="p-4">
               <div className="flex items-center justify-between">
-                <span>
-                  Connector #{s.connector_id} &mdash; started {new Date(s.start_time).toLocaleString()} &mdash;{" "}
-                  <span className="font-medium">{s.session_status}</span>
-                  {s.energy_delivered_kwh && <> &middot; {s.energy_delivered_kwh} kWh</>}
+                <span className="text-sm">
+                  Connector #{s.connector_id} — started {new Date(s.start_time).toLocaleString()}
+                  {s.energy_delivered_kwh && <> · {s.energy_delivered_kwh} kWh</>}
                 </span>
+                <Badge status={s.session_status} />
               </div>
               {s.session_status === "charging" && (
-                <div className="flex gap-2 mt-2">
-                  <input
-                    type="number"
-                    step="0.001"
-                    placeholder="Energy delivered (kWh)"
-                    className="border border-slate-300 rounded px-2 py-1 text-sm w-48"
-                    value={energyBySession[s.id] ?? ""}
-                    onChange={(e) => setEnergyBySession({ ...energyBySession, [s.id]: e.target.value })}
-                  />
-                  <button
-                    onClick={() => endSession(s.id)}
-                    className="rounded bg-slate-900 text-white px-3 py-1 text-xs"
-                  >
-                    End session
-                  </button>
+                <div className="mt-3 space-y-2">
+                  {readings[s.id]?.length > 0 && (
+                    <div className="flex items-center gap-3">
+                      <Sparkline values={readings[s.id].map((r) => Number(r.energy_reading_kwh))} />
+                      <span className="text-xs text-slate-500">
+                        {readings[s.id][readings[s.id].length - 1].energy_reading_kwh} kWh so far
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="secondary" onClick={() => simulateReading(s.id)}>
+                      Simulate meter reading
+                    </Button>
+                    <Input
+                      type="number"
+                      step="0.001"
+                      placeholder="Final energy (kWh)"
+                      className="w-44"
+                      value={energyBySession[s.id] ?? ""}
+                      onChange={(e) => setEnergyBySession({ ...energyBySession, [s.id]: e.target.value })}
+                    />
+                    <Button onClick={() => endSession(s.id)}>End session</Button>
+                  </div>
                 </div>
               )}
-            </li>
+            </Card>
           ))}
-          {sessions.length === 0 && <p className="text-sm text-slate-500">No sessions yet.</p>}
+          {sessions.length === 0 && <EmptyState>No sessions yet.</EmptyState>}
         </ul>
       </div>
 
       <div>
-        <h1 className="text-xl font-semibold mb-3">My Bookings</h1>
-        <ul className="space-y-2">
+        <PageHeader title="My Bookings" />
+        <ul className="space-y-3">
           {bookings.map((b) => (
-            <li key={b.id} className="border border-slate-200 rounded p-3 bg-white text-sm">
+            <Card key={b.id} className="p-4">
               <div className="flex items-center justify-between">
-                <span>
-                  Connector #{b.connector_id} &mdash; {new Date(b.start_time).toLocaleString()} to{" "}
-                  {new Date(b.end_time).toLocaleTimeString()} &mdash; <span className="font-medium">{b.status}</span>
+                <span className="text-sm">
+                  Connector #{b.connector_id} — {new Date(b.start_time).toLocaleString()} to{" "}
+                  {new Date(b.end_time).toLocaleTimeString()}
                 </span>
-                {b.status === "confirmed" && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => startSession(b)}
-                      className="rounded bg-slate-900 text-white px-3 py-1 text-xs"
-                    >
-                      Start session
-                    </button>
-                    <button
-                      onClick={() => cancelBooking(b.id)}
-                      className="rounded border border-slate-300 px-3 py-1 text-xs"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <Badge status={b.status} />
+                  {b.status === "confirmed" && (
+                    <>
+                      <Button onClick={() => startSession(b)}>Start session</Button>
+                      <Button variant="secondary" onClick={() => cancelBooking(b.id)}>
+                        Cancel
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
-            </li>
+            </Card>
           ))}
-          {bookings.length === 0 && <p className="text-sm text-slate-500">No bookings yet.</p>}
+          {bookings.length === 0 && <EmptyState>No bookings yet.</EmptyState>}
         </ul>
       </div>
 
-      <Link href="/bills" className="text-sm underline">
-        View my bills &rarr;
+      <Link href="/bills" className="text-sm text-slate-600 underline">
+        View my bills →
       </Link>
     </div>
   );

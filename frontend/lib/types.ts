@@ -5,6 +5,12 @@ export interface VehicleModel {
   battery_capacity_kwh: string;
 }
 
+export interface ConnectorTypeOut {
+  id: number;
+  type_name: string;
+  standard_max_power_kw: string;
+}
+
 export interface Vehicle {
   id: number;
   model_id: number;
@@ -36,6 +42,13 @@ export interface ChargerInfo {
   connectors: ConnectorInfo[];
 }
 
+export interface OperatingHours {
+  id: number;
+  day_of_week: string;
+  opening_time: string;
+  closing_time: string;
+}
+
 export interface Station {
   id: number;
   station_name: string;
@@ -43,6 +56,7 @@ export interface Station {
   location: Location;
   chargers: ChargerInfo[];
   tariff: { price_per_kwh: string } | null;
+  operating_hours: OperatingHours[];
 }
 
 export interface Booking {
@@ -67,19 +81,79 @@ export interface Session {
   energy_delivered_kwh: string | null;
 }
 
+export interface Refund {
+  id: number;
+  payment_id: number;
+  amount: string;
+  reason: string;
+  refund_date: string;
+  status: string;
+}
+
 export interface Payment {
   id: number;
-  bill_id: number;
+  bill_id: number | null;
+  subscription_id: number | null;
+  amount: string;
   payment_status: string;
   transaction_reference: string | null;
+  refund: Refund | null;
 }
 
 export interface Bill {
   id: number;
   session_id: number;
   energy_charge: string;
+  subscription_discount: string;
   tax_amount: string;
   total_amount: string;
   generated_date: string;
   payment: Payment | null;
+}
+
+export interface ChargingPlan {
+  id: number;
+  plan_name: string;
+  subscription_fee: string;
+  validity_days: number;
+  discount_percentage: string;
+  priority_booking: boolean;
+  max_sessions: number | null;
+  status: string;
+}
+
+export interface Subscription {
+  id: number;
+  plan_id: number;
+  start_date: string;
+  end_date: string;
+  status: string;
+  auto_renew: boolean;
+}
+
+export interface AppNotification {
+  id: number;
+  message: string;
+  type: string;
+  sent_date: string;
+  is_read: boolean;
+}
+
+export interface Review {
+  id: number;
+  user_id: number;
+  station_id: number;
+  rating: number;
+  comment: string | null;
+  review_date: string;
+  is_verified: boolean;
+}
+
+export interface MeterReading {
+  id: number;
+  timestamp: string;
+  energy_reading_kwh: string;
+  power_output_kw: string | null;
+  voltage: string | null;
+  current: string | null;
 }

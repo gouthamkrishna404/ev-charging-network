@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import admin, auth, bookings, payments, sessions, stations, vehicles
+from app.routers import admin, auth, bookings, notifications, payments, reviews, sessions, stations, subscriptions, vehicles
 
 app = FastAPI(title="EV Charging Network Management System", version="0.1.0")
 
@@ -19,6 +19,9 @@ app.include_router(stations.router)
 app.include_router(bookings.router)
 app.include_router(sessions.router)
 app.include_router(payments.router)
+app.include_router(subscriptions.router)
+app.include_router(notifications.router)
+app.include_router(reviews.router)
 app.include_router(admin.router)
 
 

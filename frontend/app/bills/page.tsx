@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Bill } from "@/lib/types";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader } from "@/components/ui";
 
 export default function BillsPage() {
   const [bills, setBills] = useState<Bill[]>([]);
+  const [refundReasonByBill, setRefundReasonByBill] = useState<Record<number, string>>({});
+  const [refundFormOpenFor, setRefundFormOpenFor] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   async function load() {
@@ -30,30 +33,71 @@ export default function BillsPage() {
     }
   }
 
+  async function requestRefund(paymentId: number) {
+    setMessage(null);
+    const reason = refundReasonByBill[paymentId];
+    if (!reason) {
+      setMessage("Enter a reason for the refund request.");
+      return;
+    }
+    try {
+      await apiFetch(`/payments/${paymentId}/refund-request`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+      setRefundFormOpenFor(null);
+      await load();
+    } catch (err) {
+      setMessage(err instanceof ApiError ? err.message : "Something went wrong");
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">My Bills</h1>
-      {message && <p className="text-sm text-red-600">{message}</p>}
-      <ul className="space-y-2">
+      <PageHeader title="My Bills" />
+      {message && <Alert type="error">{message}</Alert>}
+      <ul className="space-y-3">
         {bills.map((bill) => (
-          <li key={bill.id} className="border border-slate-200 rounded p-3 bg-white text-sm">
-            <div className="flex items-center justify-between">
-              <span>
-                Session #{bill.session_id} &mdash; energy ₹{bill.energy_charge} + tax ₹{bill.tax_amount} ={" "}
-                <span className="font-medium">₹{bill.total_amount}</span>
-                <span className="text-slate-500"> &middot; {new Date(bill.generated_date).toLocaleString()}</span>
-              </span>
-              {bill.payment ? (
-                <span className="text-green-700 text-xs">Paid ({bill.payment.transaction_reference})</span>
-              ) : (
-                <button onClick={() => pay(bill.id)} className="rounded bg-slate-900 text-white px-3 py-1 text-xs">
-                  Pay now
-                </button>
-              )}
+          <Card key={bill.id} className="p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="text-sm">
+                <p>
+                  Session #{bill.session_id} — energy ₹{bill.energy_charge}
+                  {Number(bill.subscription_discount) > 0 && <> − discount ₹{bill.subscription_discount}</>} + tax ₹
+                  {bill.tax_amount} = <span className="font-medium">₹{bill.total_amount}</span>
+                </p>
+                <p className="text-slate-500 text-xs mt-0.5">{new Date(bill.generated_date).toLocaleString()}</p>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                {bill.payment ? (
+                  <>
+                    <Badge status={bill.payment.payment_status} />
+                    {bill.payment.refund && <Badge status={bill.payment.refund.status} />}
+                    {bill.payment.payment_status === "successful" && !bill.payment.refund && (
+                      <Button variant="ghost" onClick={() => setRefundFormOpenFor(bill.payment!.id)}>
+                        Request refund
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <Button onClick={() => pay(bill.id)}>Pay now</Button>
+                )}
+              </div>
             </div>
-          </li>
+            {refundFormOpenFor === bill.payment?.id && (
+              <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
+                <Input
+                  placeholder="Reason for refund"
+                  className="flex-1"
+                  value={refundReasonByBill[bill.payment.id] ?? ""}
+                  onChange={(e) => setRefundReasonByBill({ ...refundReasonByBill, [bill.payment!.id]: e.target.value })}
+                />
+                <Button onClick={() => requestRefund(bill.payment!.id)}>Submit</Button>
+              </div>
+            )}
+          </Card>
         ))}
-        {bills.length === 0 && <p className="text-sm text-slate-500">No bills yet.</p>}
+        {bills.length === 0 && <EmptyState>No bills yet.</EmptyState>}
       </ul>
     </div>
   );

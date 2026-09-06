@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import User, Vehicle, VehicleModel
-from app.schemas import VehicleCreate, VehicleModelOut, VehicleOut
+from app.models import ConnectorType, User, Vehicle, VehicleModel
+from app.schemas import ConnectorTypeOut, VehicleCreate, VehicleModelOut, VehicleOut
 
 router = APIRouter(tags=["vehicles"])
 
@@ -12,6 +12,11 @@ router = APIRouter(tags=["vehicles"])
 @router.get("/vehicle-models", response_model=list[VehicleModelOut])
 def list_vehicle_models(db: Session = Depends(get_db)):
     return db.query(VehicleModel).all()
+
+
+@router.get("/connector-types", response_model=list[ConnectorTypeOut])
+def list_connector_types(db: Session = Depends(get_db)):
+    return db.query(ConnectorType).all()
 
 
 @router.get("/users/me/vehicles", response_model=list[VehicleOut])

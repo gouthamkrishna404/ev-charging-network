@@ -1,7 +1,10 @@
 # Schema Design Notes
 
-This documents how the MVP schema (17 tables, see `ERD.md`) evolved from the
-original 26-entity rough draft, and why.
+This documents how the schema (27 tables — the full original 26-entity draft,
+plus one new junction table, see `ERD.md`) evolved from the original rough
+draft, and why. The system shipped in two passes: an MVP covering the core
+loop (browse → book/walk-in → charge → bill → pay), then the remaining
+entities below once that loop was proven to work.
 
 ## What changed from the original draft, and why
 
@@ -35,25 +38,53 @@ original 26-entity rough draft, and why.
    directly; `booking_id` is nullable and only present when the session
    originated from a reservation.
 
-6. **`TARIFF` simplified for MVP**: one active price per station
-   (`price_per_kwh`), no peak/off-peak split and no effective-date history.
-   Time-based pricing without `STATION_OPERATING_HOURS` (deferred) wasn't
-   meaningful yet, and tariff history is a real V2 feature, not a demo blocker.
+6. **`TARIFF` kept simple**: one active price per station (`price_per_kwh`),
+   no peak/off-peak split and no effective-date history. Time-based pricing
+   layered on top of `STATION_OPERATING_HOURS` was judged not worth the
+   added complexity; tariff history would be the next thing to add if this
+   went further.
 
-7. **`PAYMENT` simplified for MVP**: references `BILL` only. The original
-   design also allowed a payment against a `SUBSCRIPTION`, but subscriptions
-   are out of scope for the MVP, so that exclusive-or FK pair (and the
-   `CHECK` constraint it would need) is deferred along with it.
+7. **`PAYMENT` supports both bills and subscriptions**, exactly as in the
+   original draft — a payment is for a charging session's bill *or* for a
+   subscription's fee, never both. That exclusivity is enforced by a `CHECK`
+   constraint (`ck_payments_exactly_one_target`), not just application logic.
 
-## Deferred out of the MVP
+## Entities added after the MVP
 
-Kept in the original design, planned for V2: `STATION_OPERATING_HOURS`,
-`CHARGING_PLAN`, `SUBSCRIPTION`, `METER_READING`, `NOTIFICATION`,
-`STATION_REVIEW`, `REFUND`.
+The MVP shipped with 17 tables covering the core loop. These were added once
+that loop worked, matching the original draft (with the same PK/FK and
+naming fixes applied throughout):
 
-Deferred further, to an "advanced" phase: `MAINTENANCE`, `TECHNICIAN`,
-`AUDIT_LOG`. These matter for a production system but don't touch the core
-loop (browse → book/walk-in → charge → bill → pay) the MVP demonstrates.
+- **`charging_plans` / `subscriptions`** — a user subscribes to a plan; its
+  `discount_percentage` is applied to `bills.energy_charge` at billing time
+  and stored as `bills.subscription_discount` (a snapshot, not a live
+  reference — the discount a past bill applied shouldn't change if the plan
+  changes later).
+- **`station_operating_hours`** — per-day open/close times. A station with no
+  rows is treated as open at all times (opt-in, not opt-out); `bookings` are
+  rejected outside a station's configured hours for that day.
+- **`meter_readings`** — a time series against an active `charging_session`,
+  used to show live-ish energy delivery during a session.
+- **`notifications`** — created automatically by the backend on key events
+  (booking confirmed/cancelled, session ended, payment received, refund
+  resolved), not user-authored.
+- **`station_reviews`** — one review per `(user, station)` pair
+  (`uq_review_user_station`); `is_verified` is computed server-side from
+  whether the reviewer has a completed session at that station, not
+  self-reported.
+- **`refunds`** — a driver requests one against a successful `payment`;
+  an admin who manages the station behind that payment approves or rejects
+  it. Approval flips the payment to `refunded`.
+- **`maintenance_tickets` / `technicians`** — connector-level only (per the
+  MVP scoping decision), opening a ticket takes the connector `out_of_service`
+  and completing it restores `available`.
+- **`audit_logs`** — every admin mutation (creating a station/charger/
+  connector, editing a tariff or hours, resolving a maintenance ticket or
+  refund) writes one row here. It's a plain FK-based log, not a generic
+  polymorphic one — each admin action logs which table and record it touched
+  as data, not as an enforced foreign key, which is a deliberate trade-off:
+  it can't enforce referential integrity, but it doesn't need a separate
+  audit table per entity type either.
 
 ## Constraints worth calling out
 
@@ -67,6 +98,12 @@ loop (browse → book/walk-in → charge → bill → pay) the MVP demonstrates.
 - Every `status`/`role`/`payment_method` style column has a `CHECK` constraint
   restricting it to an explicit value set, rather than being a free-text
   `VARCHAR` as in the original draft.
-- `tariffs.station_id`, `bills.session_id`, and `payments.bill_id` are all
-  `UNIQUE`, enforcing their intended one-to-one relationships at the database
-  level, not just by convention in application code.
+- `tariffs.station_id`, `bills.session_id`, `payments.bill_id`, and
+  `payments.subscription_id` are all `UNIQUE`, enforcing their intended
+  one-to-one relationships at the database level, not just by convention in
+  application code.
+- `payments` has `ck_payments_exactly_one_target`: exactly one of `bill_id` /
+  `subscription_id` must be set. This is the "exclusive arc" pattern — a
+  known relational modeling challenge (a payment is polymorphic over what it
+  pays for) solved here with nullable FKs plus a `CHECK`, rather than a
+  separate `payment_line_items` table, which would be overkill for two cases.

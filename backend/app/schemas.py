@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 
 from pydantic import BaseModel, EmailStr, ConfigDict
@@ -99,6 +99,14 @@ class TariffOut(BaseModel):
     price_per_kwh: Decimal
 
 
+class OperatingHoursOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    day_of_week: str
+    opening_time: time
+    closing_time: time
+
+
 class StationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -107,6 +115,39 @@ class StationOut(BaseModel):
     location: LocationOut
     chargers: list[ChargerOut] = []
     tariff: TariffOut | None = None
+    operating_hours: list[OperatingHoursOut] = []
+
+
+# ---------- Admin: station/infrastructure management ----------
+
+class LocationCreate(BaseModel):
+    address_line: str
+    city: str
+    state: str
+    latitude: Decimal | None = None
+    longitude: Decimal | None = None
+
+
+class StationCreate(BaseModel):
+    station_name: str
+    location: LocationCreate
+    price_per_kwh: Decimal
+
+
+class ChargerCreate(BaseModel):
+    charger_model: str | None = None
+    power_capacity_kw: Decimal
+
+
+class ConnectorCreate(BaseModel):
+    connector_type_id: int
+    max_power_kw: Decimal
+
+
+class OperatingHoursSet(BaseModel):
+    day_of_week: str
+    opening_time: time
+    closing_time: time
 
 
 # ---------- Bookings ----------
@@ -157,19 +198,36 @@ class SessionOut(BaseModel):
 # ---------- Billing ----------
 
 class PaymentCreate(BaseModel):
-    bill_id: int
+    bill_id: int | None = None
+    subscription_id: int | None = None
     payment_method: str
+
+
+class RefundOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    payment_id: int
+    amount: Decimal
+    reason: str
+    refund_date: datetime
+    status: str
+
+
+class RefundRequest(BaseModel):
+    reason: str
 
 
 class PaymentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    bill_id: int
+    bill_id: int | None
+    subscription_id: int | None
     amount: Decimal
     payment_date: datetime
     payment_method: str
     payment_status: str
     transaction_reference: str | None
+    refund: RefundOut | None = None
 
 
 class BillOut(BaseModel):
@@ -177,7 +235,134 @@ class BillOut(BaseModel):
     id: int
     session_id: int
     energy_charge: Decimal
+    subscription_discount: Decimal
     tax_amount: Decimal
     total_amount: Decimal
     generated_date: datetime
     payment: PaymentOut | None = None
+
+
+# ---------- Charging plans & subscriptions ----------
+
+class ChargingPlanOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    plan_name: str
+    subscription_fee: Decimal
+    validity_days: int
+    discount_percentage: Decimal
+    priority_booking: bool
+    max_sessions: int | None
+    status: str
+
+
+class SubscriptionCreate(BaseModel):
+    plan_id: int
+
+
+class SubscriptionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    plan_id: int
+    start_date: date
+    end_date: date
+    status: str
+    auto_renew: bool
+
+
+# ---------- Notifications ----------
+
+class NotificationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    message: str
+    type: str
+    sent_date: datetime
+    is_read: bool
+
+
+# ---------- Station reviews ----------
+
+class ReviewCreate(BaseModel):
+    rating: int
+    comment: str | None = None
+
+
+class ReviewOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    user_id: int
+    station_id: int
+    rating: int
+    comment: str | None
+    review_date: datetime
+    is_verified: bool
+
+
+# ---------- Maintenance & technicians ----------
+
+class TechnicianOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    phone: str | None
+    specialization: str | None
+
+
+class TechnicianCreate(BaseModel):
+    name: str
+    phone: str | None = None
+    specialization: str | None = None
+
+
+class MaintenanceCreate(BaseModel):
+    connector_id: int
+    technician_id: int
+    issue_description: str
+    priority: str = "medium"
+    scheduled_date: datetime
+
+
+class MaintenanceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    station_id: int
+    connector_id: int
+    technician_id: int
+    issue_description: str
+    priority: str
+    scheduled_date: datetime
+    completed_date: datetime | None
+    status: str
+
+
+# ---------- Meter readings ----------
+
+class MeterReadingCreate(BaseModel):
+    energy_reading_kwh: Decimal
+    power_output_kw: Decimal | None = None
+    voltage: Decimal | None = None
+    current: Decimal | None = None
+
+
+class MeterReadingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    timestamp: datetime
+    energy_reading_kwh: Decimal
+    power_output_kw: Decimal | None
+    voltage: Decimal | None
+    current: Decimal | None
+
+
+# ---------- Audit log ----------
+
+class AuditLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    admin_id: int
+    action: str
+    table_affected: str
+    record_id: int
+    timestamp: datetime
+    description: str | None
