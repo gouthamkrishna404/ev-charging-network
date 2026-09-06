@@ -57,6 +57,7 @@ class ChargingOperator(Base):
     stations = relationship("ChargingStation", back_populates="operator")
     admins = relationship("Admin", back_populates="operator")
     technicians = relationship("Technician", back_populates="operator")
+    charging_plans = relationship("ChargingPlan", back_populates="operator")
 
 
 class Admin(Base):
@@ -346,7 +347,8 @@ class ChargingPlan(Base):
     __tablename__ = "charging_plans"
 
     id = Column(Integer, primary_key=True)
-    plan_name = Column(String(50), nullable=False, unique=True)
+    operator_id = Column(Integer, ForeignKey("charging_operators.id"), nullable=False)
+    plan_name = Column(String(50), nullable=False)
     subscription_fee = Column(Numeric(8, 2), nullable=False)
     validity_days = Column(Integer, nullable=False)
     discount_percentage = Column(Numeric(5, 2), nullable=False, server_default="0")
@@ -354,9 +356,17 @@ class ChargingPlan(Base):
     max_sessions = Column(Integer, nullable=True)
     status = Column(String(20), nullable=False, server_default="active")
 
-    __table_args__ = (CheckConstraint("status IN ('active','inactive')", name="ck_plans_status"),)
+    __table_args__ = (
+        CheckConstraint("status IN ('active','inactive')", name="ck_plans_status"),
+        UniqueConstraint("operator_id", "plan_name", name="uq_plans_operator_name"),
+    )
 
+    operator = relationship("ChargingOperator", back_populates="charging_plans")
     subscriptions = relationship("Subscription", back_populates="plan")
+
+    @property
+    def operator_name(self) -> str:
+        return self.operator.operator_name
 
 
 class Subscription(Base):

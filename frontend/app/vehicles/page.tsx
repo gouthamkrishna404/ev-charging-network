@@ -4,8 +4,17 @@ import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Vehicle, VehicleModel } from "@/lib/types";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/components/ui";
+import RequireAuth from "@/components/RequireAuth";
 
 export default function VehiclesPage() {
+  return (
+    <RequireAuth role="driver">
+      <VehiclesContent />
+    </RequireAuth>
+  );
+}
+
+function VehiclesContent() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [models, setModels] = useState<VehicleModel[]>([]);
   const [modelId, setModelId] = useState<number | "">("");

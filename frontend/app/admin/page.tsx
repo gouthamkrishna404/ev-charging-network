@@ -6,10 +6,19 @@ import { isSuperAdmin } from "@/lib/auth";
 import { ConnectorTypeOut, Station } from "@/lib/types";
 import { AdminBooking, Maintenance, Revenue, Technician, TeamAdmin } from "@/lib/admin-types";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/components/ui";
+import RequireAuth from "@/components/RequireAuth";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function AdminPage() {
+  return (
+    <RequireAuth role="admin">
+      <AdminContent />
+    </RequireAuth>
+  );
+}
+
+function AdminContent() {
   const [stations, setStations] = useState<Station[]>([]);
   const [connectorTypes, setConnectorTypes] = useState<ConnectorTypeOut[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
@@ -21,7 +30,7 @@ export default function AdminPage() {
   const [stationAdmins, setStationAdmins] = useState<TeamAdmin[]>([]);
   const [assignAdminId, setAssignAdminId] = useState<number | "">("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
-  const canManageTeam = isSuperAdmin();
+  const [canManageTeam, setCanManageTeam] = useState(false);
 
   // new station form
   const [showNewStation, setShowNewStation] = useState(false);
@@ -39,6 +48,7 @@ export default function AdminPage() {
   const [maintenanceConnectorId, setMaintenanceConnectorId] = useState<number | "">("");
   const [maintenanceTechId, setMaintenanceTechId] = useState<number | "">("");
   const [maintenanceIssue, setMaintenanceIssue] = useState("");
+  const [editPrice, setEditPrice] = useState("");
   const [hours, setHours] = useState<Record<string, { open: string; close: string; enabled: boolean }>>(
     Object.fromEntries(DAYS.map((d) => [d, { open: "06:00", close: "22:00", enabled: false }]))
   );
@@ -61,6 +71,7 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
+    setCanManageTeam(isSuperAdmin());
     load();
   }, []);
 
@@ -84,6 +95,7 @@ export default function AdminPage() {
         })
       );
       setHours(initHours);
+      setEditPrice(station.tariff?.price_per_kwh ?? "");
     }
     const [b, r, m, sa] = await Promise.all([
       apiFetch<AdminBooking[]>(`/admin/stations/${stationId}/bookings`),
@@ -109,6 +121,7 @@ export default function AdminPage() {
   }
 
   async function unassignAdmin(stationId: number, adminId: number) {
+    if (!confirm("Remove this admin from managing the station?")) return;
     try {
       await apiFetch(`/admin/stations/${stationId}/admins/${adminId}`, { method: "DELETE" });
       setStationAdmins(await apiFetch<TeamAdmin[]>(`/admin/stations/${stationId}/admins`));
@@ -181,6 +194,31 @@ export default function AdminPage() {
         body: JSON.stringify(payload),
       });
       setMessage({ type: "success", text: "Operating hours updated." });
+      await load();
+      setExpanded(stationId);
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+    }
+  }
+
+  async function updateTariff(stationId: number) {
+    try {
+      await apiFetch(`/admin/stations/${stationId}/tariff?price_per_kwh=${Number(editPrice)}`, { method: "PUT" });
+      setMessage({ type: "success", text: "Price updated." });
+      await load();
+      setExpanded(stationId);
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+    }
+  }
+
+  async function toggleStationStatus(stationId: number, current: string) {
+    const next = current === "active" ? "inactive" : "active";
+    if (next === "inactive" && !confirm("Deactivate this station? It will disappear from driver search immediately."))
+      return;
+    try {
+      await apiFetch(`/admin/stations/${stationId}/status?new_status=${next}`, { method: "PUT" });
+      setMessage({ type: "success", text: `Station marked ${next}.` });
       await load();
       setExpanded(stationId);
     } catch (err) {
@@ -261,6 +299,27 @@ export default function AdminPage() {
                     Revenue: <span className="font-medium">₹{revenue.total_revenue}</span> from {revenue.completed_sessions} completed session(s)
                   </p>
                 )}
+
+                <div>
+                  <p className="text-sm font-medium mb-1">Pricing & status</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-slate-500">₹</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="w-28"
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(e.target.value)}
+                    />
+                    <span className="text-sm text-slate-500">/ kWh</span>
+                    <Button variant="secondary" onClick={() => updateTariff(s.id)}>
+                      Save price
+                    </Button>
+                    <Button variant="secondary" onClick={() => toggleStationStatus(s.id, s.status)}>
+                      {s.status === "active" ? "Deactivate station" : "Reactivate station"}
+                    </Button>
+                  </div>
+                </div>
 
                 <div>
                   <p className="text-sm font-medium mb-1">Managed by</p>

@@ -59,7 +59,12 @@ naming fixes applied throughout):
   `discount_percentage` is applied to `bills.energy_charge` at billing time
   and stored as `bills.subscription_discount` (a snapshot, not a live
   reference — the discount a past bill applied shouldn't change if the plan
-  changes later).
+  changes later). `charging_plans.operator_id` was added after the fact, for
+  the same reason as `technicians.operator_id` below: a plan with no operator
+  meant any subscriber's discount applied at *any* station on the whole
+  marketplace, including competing operators who never agreed to honor it.
+  Plans, and the discount check at billing time, are now scoped per operator
+  — a user can hold one active subscription per operator simultaneously.
 - **`station_operating_hours`** — per-day open/close times. A station with no
   rows is treated as open at all times (opt-in, not opt-out); `bookings` are
   rejected outside a station's configured hours for that day.

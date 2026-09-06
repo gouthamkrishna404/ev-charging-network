@@ -6,8 +6,17 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { Booking, MeterReading, Session } from "@/lib/types";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader } from "@/components/ui";
 import Sparkline from "@/components/Sparkline";
+import RequireAuth from "@/components/RequireAuth";
 
 export default function BookingsPage() {
+  return (
+    <RequireAuth role="driver">
+      <BookingsContent />
+    </RequireAuth>
+  );
+}
+
+function BookingsContent() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [readings, setReadings] = useState<Record<number, MeterReading[]>>({});
@@ -34,6 +43,7 @@ export default function BookingsPage() {
   }, []);
 
   async function cancelBooking(id: number) {
+    if (!confirm("Cancel this booking?")) return;
     setMessage(null);
     try {
       await apiFetch(`/bookings/${id}/cancel`, { method: "POST" });

@@ -273,6 +273,8 @@ class BillOut(BaseModel):
 class ChargingPlanOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    operator_id: int
+    operator_name: str
     plan_name: str
     subscription_fee: Decimal
     validity_days: int
@@ -280,6 +282,15 @@ class ChargingPlanOut(BaseModel):
     priority_booking: bool
     max_sessions: int | None
     status: str
+
+
+class ChargingPlanCreate(BaseModel):
+    plan_name: str
+    subscription_fee: Decimal
+    validity_days: int
+    discount_percentage: Decimal = Decimal("0")
+    priority_booking: bool = False
+    max_sessions: int | None = None
 
 
 class SubscriptionCreate(BaseModel):

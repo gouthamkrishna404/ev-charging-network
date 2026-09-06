@@ -4,8 +4,17 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { AdminRefund } from "@/lib/admin-types";
 import { Badge, Button, Card, EmptyState, PageHeader } from "@/components/ui";
+import RequireAuth from "@/components/RequireAuth";
 
 export default function AdminRefundsPage() {
+  return (
+    <RequireAuth role="admin">
+      <AdminRefundsContent />
+    </RequireAuth>
+  );
+}
+
+function AdminRefundsContent() {
   const [refunds, setRefunds] = useState<AdminRefund[]>([]);
 
   async function load() {
@@ -17,6 +26,7 @@ export default function AdminRefundsPage() {
   }, []);
 
   async function resolve(id: number, action: "approve" | "reject") {
+    if (!confirm(`${action === "approve" ? "Approve" : "Reject"} this refund request?`)) return;
     await apiFetch(`/admin/refunds/${id}/${action}`, { method: "POST" });
     await load();
   }

@@ -13,6 +13,7 @@ from app.models import (
     Bill,
     Booking,
     Charger,
+    ChargingPlan,
     ChargingSession,
     ChargingStation,
     Connector,
@@ -32,6 +33,8 @@ from app.schemas import (
     BookingOut,
     ChargerCreate,
     ChargerOut,
+    ChargingPlanCreate,
+    ChargingPlanOut,
     ConnectorCreate,
     ConnectorOut,
     MaintenanceCreate,
@@ -153,6 +156,24 @@ def set_tariff(
     log_action(db, admin, "Update", "tariffs", tariff.id, f"Updated price to ₹{price_per_kwh}/kWh")
     db.commit()
     return {"station_id": station_id, "price_per_kwh": price_per_kwh}
+
+
+@router.put("/stations/{station_id}/status", response_model=StationOut)
+def set_station_status(
+    station_id: int,
+    new_status: str,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    _require_managed_station(station_id, admin, db)
+    if new_status not in ("active", "inactive", "under_maintenance"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
+
+    station = db.get(ChargingStation, station_id)
+    station.status = new_status
+    log_action(db, admin, "Update", "charging_stations", station_id, f"Set status to {new_status}")
+    db.commit()
+    return _station_query(db).filter(ChargingStation.id == station_id).first()
 
 
 @router.put("/stations/{station_id}/operating-hours", response_model=list[OperatingHoursOut])
@@ -372,6 +393,60 @@ def unassign_station_admin(
 
 def _managed_admin_count(station_id: int, db: Session) -> int:
     return db.query(StationAdmin).filter(StationAdmin.station_id == station_id).count()
+
+
+# ---------- Charging plans (operator-wide) ----------
+
+@router.get("/plans", response_model=list[ChargingPlanOut])
+def list_own_plans(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    return db.query(ChargingPlan).filter(ChargingPlan.operator_id == admin.operator_id).all()
+
+
+@router.post("/plans", response_model=ChargingPlanOut, status_code=status.HTTP_201_CREATED)
+def create_plan(payload: ChargingPlanCreate, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    _require_super_admin(admin)
+    if (
+        db.query(ChargingPlan)
+        .filter(ChargingPlan.operator_id == admin.operator_id, ChargingPlan.plan_name == payload.plan_name)
+        .first()
+    ):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You already have a plan with this name")
+
+    plan = ChargingPlan(operator_id=admin.operator_id, **payload.model_dump())
+    db.add(plan)
+    db.flush()
+    log_action(db, admin, "Create", "charging_plans", plan.id, f"Created plan '{plan.plan_name}'")
+    db.commit()
+    db.refresh(plan)
+    return plan
+
+
+@router.post("/plans/{plan_id}/deactivate", response_model=ChargingPlanOut)
+def deactivate_plan(plan_id: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    _require_super_admin(admin)
+    plan = db.get(ChargingPlan, plan_id)
+    if plan is None or plan.operator_id != admin.operator_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
+
+    plan.status = "inactive"
+    log_action(db, admin, "Update", "charging_plans", plan.id, f"Deactivated plan '{plan.plan_name}'")
+    db.commit()
+    db.refresh(plan)
+    return plan
+
+
+@router.post("/plans/{plan_id}/reactivate", response_model=ChargingPlanOut)
+def reactivate_plan(plan_id: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    _require_super_admin(admin)
+    plan = db.get(ChargingPlan, plan_id)
+    if plan is None or plan.operator_id != admin.operator_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
+
+    plan.status = "active"
+    log_action(db, admin, "Update", "charging_plans", plan.id, f"Reactivated plan '{plan.plan_name}'")
+    db.commit()
+    db.refresh(plan)
+    return plan
 
 
 # ---------- Refunds ----------

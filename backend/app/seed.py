@@ -152,15 +152,15 @@ def run():
             )
 
         basic_plan = ChargingPlan(
-            plan_name="Basic", subscription_fee=Decimal("199.00"), validity_days=30,
+            operator_id=operator.id, plan_name="Basic", subscription_fee=Decimal("199.00"), validity_days=30,
             discount_percentage=Decimal("5.00"), priority_booking=False, max_sessions=10,
         )
         premium_plan = ChargingPlan(
-            plan_name="Premium", subscription_fee=Decimal("499.00"), validity_days=30,
+            operator_id=operator.id, plan_name="Premium", subscription_fee=Decimal("499.00"), validity_days=30,
             discount_percentage=Decimal("15.00"), priority_booking=True, max_sessions=None,
         )
         fleet_plan = ChargingPlan(
-            plan_name="Fleet", subscription_fee=Decimal("1999.00"), validity_days=90,
+            operator_id=operator.id, plan_name="Fleet", subscription_fee=Decimal("1999.00"), validity_days=90,
             discount_percentage=Decimal("25.00"), priority_booking=True, max_sessions=None,
         )
         db.add_all([basic_plan, premium_plan, fleet_plan])

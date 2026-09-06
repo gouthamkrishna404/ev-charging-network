@@ -5,21 +5,31 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
 import { TeamAdmin } from "@/lib/admin-types";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/components/ui";
+import RequireAuth from "@/components/RequireAuth";
 
 export default function TeamPage() {
+  return (
+    <RequireAuth role="admin">
+      <TeamContent />
+    </RequireAuth>
+  );
+}
+
+function TeamContent() {
   const [team, setTeam] = useState<TeamAdmin[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("station_manager");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
-  const canManage = isSuperAdmin();
+  const [canManage, setCanManage] = useState(false);
 
   async function load() {
     setTeam(await apiFetch<TeamAdmin[]>("/admin/team"));
   }
 
   useEffect(() => {
+    setCanManage(isSuperAdmin());
     load();
   }, []);
 

@@ -4,8 +4,17 @@ import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Bill } from "@/lib/types";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader } from "@/components/ui";
+import RequireAuth from "@/components/RequireAuth";
 
 export default function BillsPage() {
+  return (
+    <RequireAuth role="driver">
+      <BillsContent />
+    </RequireAuth>
+  );
+}
+
+function BillsContent() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [refundReasonByBill, setRefundReasonByBill] = useState<Record<number, string>>({});
   const [refundFormOpenFor, setRefundFormOpenFor] = useState<number | null>(null);

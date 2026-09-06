@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.compatibility import check_connector_compatible
 from app.database import get_db
-from app.models import Bill, Booking, ChargingSession, Connector, MeterReading, Subscription, User, Vehicle
+from app.models import Bill, Booking, ChargingPlan, ChargingSession, Connector, MeterReading, Subscription, User, Vehicle
 from app.notifications import notify
 from app.schemas import BillOut, MeterReadingCreate, MeterReadingOut, SessionEnd, SessionOut, SessionStart
 
@@ -60,13 +60,15 @@ def start_session(
     return charging_session
 
 
-def _active_subscription(db: Session, user_id: int) -> Subscription | None:
+def _active_subscription(db: Session, user_id: int, operator_id: int) -> Subscription | None:
     return (
         db.query(Subscription)
+        .join(ChargingPlan, Subscription.plan_id == ChargingPlan.id)
         .filter(
             Subscription.user_id == user_id,
             Subscription.status == "active",
             Subscription.end_date >= date.today(),
+            ChargingPlan.operator_id == operator_id,
         )
         .first()
     )
@@ -99,7 +101,7 @@ def end_session(
 
     energy_charge = (payload.energy_delivered_kwh * tariff.price_per_kwh).quantize(Decimal("0.01"))
 
-    subscription = _active_subscription(db, current_user.id)
+    subscription = _active_subscription(db, current_user.id, charging_session.connector.charger.station.operator_id)
     subscription_discount = Decimal("0.00")
     if subscription is not None:
         subscription_discount = (energy_charge * subscription.plan.discount_percentage / 100).quantize(Decimal("0.01"))

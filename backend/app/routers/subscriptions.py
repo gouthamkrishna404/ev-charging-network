@@ -12,8 +12,11 @@ router = APIRouter(tags=["subscriptions"])
 
 
 @router.get("/plans", response_model=list[ChargingPlanOut])
-def list_plans(db: Session = Depends(get_db)):
-    return db.query(ChargingPlan).filter(ChargingPlan.status == "active").all()
+def list_plans(operator_id: int | None = None, db: Session = Depends(get_db)):
+    query = db.query(ChargingPlan).filter(ChargingPlan.status == "active")
+    if operator_id is not None:
+        query = query.filter(ChargingPlan.operator_id == operator_id)
+    return query.all()
 
 
 @router.get("/subscriptions/me", response_model=list[SubscriptionOut])
@@ -38,15 +41,20 @@ def subscribe(
 
     existing = (
         db.query(Subscription)
+        .join(ChargingPlan, Subscription.plan_id == ChargingPlan.id)
         .filter(
             Subscription.user_id == current_user.id,
             Subscription.status == "active",
             Subscription.end_date >= date.today(),
+            ChargingPlan.operator_id == plan.operator_id,
         )
         .first()
     )
     if existing is not None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You already have an active subscription")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"You already have an active {plan.operator_name} subscription",
+        )
 
     subscription = Subscription(
         user_id=current_user.id,

@@ -25,14 +25,13 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
 
-  const loggedIn = isLoggedIn();
-
-  async function load() {
+  async function load(loggedInNow: boolean) {
     const [s, v, m, r] = await Promise.all([
       apiFetch<Station>(`/stations/${id}`),
-      loggedIn ? apiFetch<Vehicle[]>("/users/me/vehicles") : Promise.resolve([]),
-      loggedIn ? apiFetch<VehicleModel[]>("/vehicle-models") : Promise.resolve([]),
+      loggedInNow ? apiFetch<Vehicle[]>("/users/me/vehicles") : Promise.resolve([]),
+      loggedInNow ? apiFetch<VehicleModel[]>("/vehicle-models") : Promise.resolve([]),
       apiFetch<Review[]>(`/stations/${id}/reviews`),
     ]);
     setStation(s);
@@ -44,7 +43,9 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   }
 
   useEffect(() => {
-    load();
+    const loggedInNow = isLoggedIn();
+    setLoggedIn(loggedInNow);
+    load(loggedInNow);
   }, [id]);
 
   const activeVehicles = vehicles.filter((v) => v.vehicle_status === "active");

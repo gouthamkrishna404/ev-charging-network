@@ -4,8 +4,17 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { AuditLogEntry } from "@/lib/admin-types";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
+import RequireAuth from "@/components/RequireAuth";
 
 export default function AuditLogPage() {
+  return (
+    <RequireAuth role="admin">
+      <AuditLogContent />
+    </RequireAuth>
+  );
+}
+
+function AuditLogContent() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
 
   useEffect(() => {

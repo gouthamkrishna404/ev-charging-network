@@ -113,6 +113,8 @@ export interface Bill {
 
 export interface ChargingPlan {
   id: number;
+  operator_id: number;
+  operator_name: string;
   plan_name: string;
   subscription_fee: string;
   validity_days: number;
