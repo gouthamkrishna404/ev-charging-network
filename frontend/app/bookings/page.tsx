@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Booking, MeterReading, Session } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader } from "@/components/ui";
-import Sparkline from "@/components/Sparkline";
+import { Booking, Session } from "@/lib/types";
+import { Alert, Badge, Button, Card, EmptyState, PageHeader } from "@/components/ui";
+import LiveEnergyEstimate from "@/components/LiveEnergyEstimate";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function BookingsPage() {
@@ -19,8 +19,6 @@ export default function BookingsPage() {
 function BookingsContent() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [readings, setReadings] = useState<Record<number, MeterReading[]>>({});
-  const [energyBySession, setEnergyBySession] = useState<Record<number, string>>({});
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   async function load() {
@@ -30,12 +28,6 @@ function BookingsContent() {
     ]);
     setBookings(b);
     setSessions(s);
-
-    const charging = s.filter((session) => session.session_status === "charging");
-    const readingLists = await Promise.all(
-      charging.map((session) => apiFetch<MeterReading[]>(`/sessions/${session.id}/readings`))
-    );
-    setReadings(Object.fromEntries(charging.map((session, i) => [session.id, readingLists[i]])));
   }
 
   useEffect(() => {
@@ -70,33 +62,10 @@ function BookingsContent() {
     }
   }
 
-  async function simulateReading(sessionId: number) {
-    const previous = readings[sessionId] ?? [];
-    const lastEnergy = previous.length ? Number(previous[previous.length - 1].energy_reading_kwh) : 0;
-    const nextEnergy = (lastEnergy + 1.5 + Math.random() * 2).toFixed(3);
-    await apiFetch(`/sessions/${sessionId}/readings`, {
-      method: "POST",
-      body: JSON.stringify({
-        energy_reading_kwh: Number(nextEnergy),
-        power_output_kw: Math.round(30 + Math.random() * 60),
-      }),
-    });
-    const updated = await apiFetch<MeterReading[]>(`/sessions/${sessionId}/readings`);
-    setReadings((prev) => ({ ...prev, [sessionId]: updated }));
-  }
-
   async function endSession(sessionId: number) {
     setMessage(null);
-    const energy = energyBySession[sessionId];
-    if (!energy) {
-      setMessage({ type: "error", text: "Enter the energy delivered (kWh) first." });
-      return;
-    }
     try {
-      await apiFetch(`/sessions/${sessionId}/end`, {
-        method: "POST",
-        body: JSON.stringify({ energy_delivered_kwh: Number(energy) }),
-      });
+      await apiFetch(`/sessions/${sessionId}/end`, { method: "POST" });
       setMessage({ type: "success", text: "Session ended. Bill generated — check My Bills." });
       await load();
     } catch (err) {
@@ -111,7 +80,7 @@ function BookingsContent() {
       <div>
         <PageHeader
           title="My Sessions"
-          subtitle="A session is created the moment you plug in — whether it came from a booking or a walk-in start. End it here to generate your bill."
+          subtitle="A session is created the moment you plug in — whether it came from a booking or a walk-in start. Energy delivered is read from the connector automatically, just like a real charger."
         />
         <ul className="space-y-3">
           {sessions.map((s) => (
@@ -125,28 +94,8 @@ function BookingsContent() {
               </div>
               {s.session_status === "charging" && (
                 <div className="mt-3 space-y-2">
-                  {readings[s.id]?.length > 0 && (
-                    <div className="flex items-center gap-3">
-                      <Sparkline values={readings[s.id].map((r) => Number(r.energy_reading_kwh))} />
-                      <span className="text-xs text-slate-500">
-                        {readings[s.id][readings[s.id].length - 1].energy_reading_kwh} kWh so far
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="secondary" onClick={() => simulateReading(s.id)}>
-                      Simulate meter reading
-                    </Button>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      placeholder="Final energy (kWh)"
-                      className="w-44"
-                      value={energyBySession[s.id] ?? ""}
-                      onChange={(e) => setEnergyBySession({ ...energyBySession, [s.id]: e.target.value })}
-                    />
-                    <Button onClick={() => endSession(s.id)}>End session</Button>
-                  </div>
+                  <LiveEnergyEstimate startTime={s.start_time} powerKw={Number(s.connector_power_kw)} />
+                  <Button onClick={() => endSession(s.id)}>End session</Button>
                 </div>
               )}
             </Card>

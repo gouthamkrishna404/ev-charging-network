@@ -9,7 +9,7 @@ from app.compatibility import check_connector_compatible
 from app.database import get_db
 from app.models import Bill, Booking, ChargingPlan, ChargingSession, Connector, MeterReading, Subscription, User, Vehicle
 from app.notifications import notify
-from app.schemas import BillOut, MeterReadingCreate, MeterReadingOut, SessionEnd, SessionOut, SessionStart
+from app.schemas import BillOut, MeterReadingCreate, MeterReadingOut, SessionOut, SessionStart
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -77,7 +77,6 @@ def _active_subscription(db: Session, user_id: int, operator_id: int) -> Subscri
 @router.post("/{session_id}/end", response_model=BillOut)
 def end_session(
     session_id: int,
-    payload: SessionEnd,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -91,15 +90,29 @@ def end_session(
     if tariff is None:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Station has no tariff configured")
 
-    charging_session.end_time = datetime.now(timezone.utc)
-    charging_session.energy_delivered_kwh = payload.energy_delivered_kwh
+    # No real charger hardware to report a meter reading, so the energy delivered is derived
+    # from elapsed time at the connector's rated power -- the driver never types this in,
+    # same as a real charging session's kWh count is read off the connector, not self-reported.
+    end_time = datetime.now(timezone.utc)
+    elapsed_hours = Decimal((end_time - charging_session.start_time).total_seconds()) / Decimal(3600)
+    energy_delivered_kwh = (charging_session.connector.max_power_kw * elapsed_hours).quantize(Decimal("0.001"))
+
+    charging_session.end_time = end_time
+    charging_session.energy_delivered_kwh = energy_delivered_kwh
     charging_session.session_status = "completed"
     charging_session.connector.status = "available"
+    db.add(
+        MeterReading(
+            session_id=charging_session.id,
+            energy_reading_kwh=energy_delivered_kwh,
+            power_output_kw=charging_session.connector.max_power_kw,
+        )
+    )
 
     if charging_session.booking is not None:
         charging_session.booking.status = "completed"
 
-    energy_charge = (payload.energy_delivered_kwh * tariff.price_per_kwh).quantize(Decimal("0.01"))
+    energy_charge = (energy_delivered_kwh * tariff.price_per_kwh).quantize(Decimal("0.01"))
 
     subscription = _active_subscription(db, current_user.id, charging_session.connector.charger.station.operator_id)
     subscription_discount = Decimal("0.00")

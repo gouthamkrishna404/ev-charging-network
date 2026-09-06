@@ -74,6 +74,7 @@ export interface Session {
   id: number;
   booking_id: number | null;
   connector_id: number;
+  connector_power_kw: string;
   vehicle_id: number;
   start_time: string;
   end_time: string | null;

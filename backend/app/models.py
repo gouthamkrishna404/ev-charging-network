@@ -313,6 +313,10 @@ class ChargingSession(Base):
         "MeterReading", back_populates="session", order_by="MeterReading.timestamp"
     )
 
+    @property
+    def connector_power_kw(self):
+        return self.connector.max_power_kw
+
 
 class MeterReading(Base):
     __tablename__ = "meter_readings"

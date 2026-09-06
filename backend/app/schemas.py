@@ -205,15 +205,12 @@ class SessionStart(BaseModel):
     booking_id: int | None = None
 
 
-class SessionEnd(BaseModel):
-    energy_delivered_kwh: Decimal
-
-
 class SessionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     booking_id: int | None
     connector_id: int
+    connector_power_kw: Decimal
     vehicle_id: int
     start_time: datetime
     end_time: datetime | None

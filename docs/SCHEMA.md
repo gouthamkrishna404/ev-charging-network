@@ -68,8 +68,16 @@ naming fixes applied throughout):
 - **`station_operating_hours`** — per-day open/close times. A station with no
   rows is treated as open at all times (opt-in, not opt-out); `bookings` are
   rejected outside a station's configured hours for that day.
-- **`meter_readings`** — a time series against an active `charging_session`,
-  used to show live-ish energy delivery during a session.
+- **`meter_readings`** — a time series against a `charging_session`. Originally
+  the driver typed in a "final energy (kWh)" number to end a session, which
+  doesn't reflect how charging actually works — a real charger's meter
+  reports the energy, the driver never self-declares it. `charging_sessions.energy_delivered_kwh`
+  is now computed server-side from elapsed time at the connector's rated
+  power (`connectors.max_power_kw`) the moment a session ends, and a row is
+  written to `meter_readings` at that point. The driver-facing "kWh so far"
+  counter while charging is a client-side estimate using the same formula —
+  it's for feedback only; the number that actually gets billed is calculated
+  once, server-side, at end time.
 - **`notifications`** — created automatically by the backend on key events
   (booking confirmed/cancelled, session ended, payment received, refund
   resolved), not user-authored.
