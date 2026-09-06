@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api";
+import { isLoggedIn } from "@/lib/auth";
 import { Review, Station, Vehicle } from "@/lib/types";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, StarRating } from "@/components/ui";
 
@@ -23,10 +25,12 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   const [reviewComment, setReviewComment] = useState("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
+  const loggedIn = isLoggedIn();
+
   async function load() {
     const [s, v, r] = await Promise.all([
       apiFetch<Station>(`/stations/${id}`),
-      apiFetch<Vehicle[]>("/users/me/vehicles"),
+      loggedIn ? apiFetch<Vehicle[]>("/users/me/vehicles") : Promise.resolve([]),
       apiFetch<Review[]>(`/stations/${id}/reviews`),
     ]);
     setStation(s);
@@ -116,7 +120,23 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
         )}
       </div>
 
-      {vehicles.length === 0 && <Alert type="error">Add a vehicle before booking or charging — see My Vehicles.</Alert>}
+      {!loggedIn && (
+        <Alert type="error">
+          <Link href="/login" className="underline">
+            Log in
+          </Link>{" "}
+          to book a connector or start charging here.
+        </Alert>
+      )}
+      {loggedIn && vehicles.length === 0 && (
+        <Alert type="error">
+          Add a vehicle before booking or charging —{" "}
+          <Link href="/vehicles" className="underline">
+            go to My Vehicles
+          </Link>
+          .
+        </Alert>
+      )}
       {message && <Alert type={message.type}>{message.text}</Alert>}
 
       <div className="space-y-4">
@@ -200,31 +220,40 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
           ))}
           {reviews.length === 0 && <EmptyState>No reviews yet.</EmptyState>}
         </ul>
-        <form onSubmit={submitReview} className="flex flex-wrap items-end gap-2">
-          <label className="text-xs text-slate-600">
-            Rating
-            <select
-              className="block mt-1 border border-slate-300 rounded-md px-2 py-2 text-sm"
-              value={reviewRating}
-              onChange={(e) => setReviewRating(Number(e.target.value))}
-            >
-              {[5, 4, 3, 2, 1].map((n) => (
-                <option key={n} value={n}>
-                  {n} star{n > 1 ? "s" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Input
-            placeholder="Optional comment"
-            className="flex-1 min-w-[180px]"
-            value={reviewComment}
-            onChange={(e) => setReviewComment(e.target.value)}
-          />
-          <Button type="submit" variant="secondary">
-            Post review
-          </Button>
-        </form>
+        {loggedIn ? (
+          <form onSubmit={submitReview} className="flex flex-wrap items-end gap-2">
+            <label className="text-xs text-slate-600">
+              Rating
+              <select
+                className="block mt-1 border border-slate-300 rounded-md px-2 py-2 text-sm"
+                value={reviewRating}
+                onChange={(e) => setReviewRating(Number(e.target.value))}
+              >
+                {[5, 4, 3, 2, 1].map((n) => (
+                  <option key={n} value={n}>
+                    {n} star{n > 1 ? "s" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Input
+              placeholder="Optional comment"
+              className="flex-1 min-w-[180px]"
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+            />
+            <Button type="submit" variant="secondary">
+              Post review
+            </Button>
+          </form>
+        ) : (
+          <p className="text-sm text-slate-500">
+            <Link href="/login" className="underline">
+              Log in
+            </Link>{" "}
+            to leave a review.
+          </p>
+        )}
       </Card>
     </div>
   );

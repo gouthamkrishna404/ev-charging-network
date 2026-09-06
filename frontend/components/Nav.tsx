@@ -74,14 +74,19 @@ export default function Nav() {
           </>
         )}
         {!loggedIn && (
-          <div className="ml-auto flex gap-4 text-sm">
-            <Link href="/login" className="text-slate-600 hover:text-slate-900">
-              Log in
+          <>
+            <Link href="/stations" className={linkClass("/stations")}>
+              Stations
             </Link>
-            <Link href="/register" className="text-slate-600 hover:text-slate-900">
-              Register
-            </Link>
-          </div>
+            <div className="ml-auto flex gap-4 text-sm">
+              <Link href="/login" className="text-slate-600 hover:text-slate-900">
+                Log in
+              </Link>
+              <Link href="/register" className="text-slate-600 hover:text-slate-900">
+                Register
+              </Link>
+            </div>
+          </>
         )}
       </div>
     </nav>

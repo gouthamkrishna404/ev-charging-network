@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.compatibility import check_connector_compatible
 from app.database import get_db
 from app.models import Booking, Connector, User, Vehicle
 from app.notifications import notify
@@ -48,6 +49,7 @@ def create_booking(
     if connector is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connector not found")
 
+    check_connector_compatible(db, vehicle, connector)
     _check_operating_hours(connector, payload.start_time, payload.end_time)
 
     booking = Booking(

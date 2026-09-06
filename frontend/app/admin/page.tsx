@@ -194,6 +194,7 @@ export default function AdminPage() {
     <div className="space-y-6">
       <PageHeader
         title="Stations I Manage"
+        subtitle="Click a station to manage its chargers, connectors, pricing, hours, and maintenance."
         action={<Button onClick={() => setShowNewStation(!showNewStation)}>{showNewStation ? "Cancel" : "+ New station"}</Button>}
       />
       {message && <Alert type={message.type}>{message.text}</Alert>}

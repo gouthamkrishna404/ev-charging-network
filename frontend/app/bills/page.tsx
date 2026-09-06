@@ -54,7 +54,10 @@ export default function BillsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="My Bills" />
+      <PageHeader
+        title="My Bills"
+        subtitle="One bill per charging session, generated the moment you end it. Active subscription discounts are applied automatically before tax."
+      />
       {message && <Alert type="error">{message}</Alert>}
       <ul className="space-y-3">
         {bills.map((bill) => (
@@ -97,7 +100,7 @@ export default function BillsPage() {
             )}
           </Card>
         ))}
-        {bills.length === 0 && <EmptyState>No bills yet.</EmptyState>}
+        {bills.length === 0 && <EmptyState>No bills yet — they appear automatically once you end a charging session.</EmptyState>}
       </ul>
     </div>
   );

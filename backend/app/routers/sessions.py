@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.compatibility import check_connector_compatible
 from app.database import get_db
 from app.models import Bill, Booking, ChargingSession, Connector, MeterReading, Subscription, User, Vehicle
 from app.notifications import notify
@@ -30,6 +31,8 @@ def start_session(
     vehicle = db.get(Vehicle, payload.vehicle_id)
     if vehicle is None or vehicle.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
+
+    check_connector_compatible(db, vehicle, connector)
 
     booking = None
     if payload.booking_id is not None:

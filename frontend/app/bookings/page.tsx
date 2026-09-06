@@ -99,7 +99,10 @@ export default function BookingsPage() {
       {message && <Alert type={message.type}>{message.text}</Alert>}
 
       <div>
-        <PageHeader title="My Sessions" />
+        <PageHeader
+          title="My Sessions"
+          subtitle="A session is created the moment you plug in — whether it came from a booking or a walk-in start. End it here to generate your bill."
+        />
         <ul className="space-y-3">
           {sessions.map((s) => (
             <Card key={s.id} className="p-4">
@@ -138,12 +141,23 @@ export default function BookingsPage() {
               )}
             </Card>
           ))}
-          {sessions.length === 0 && <EmptyState>No sessions yet.</EmptyState>}
+          {sessions.length === 0 && (
+            <EmptyState>
+              No sessions yet —{" "}
+              <Link href="/stations" className="underline">
+                find a station
+              </Link>{" "}
+              to start charging.
+            </EmptyState>
+          )}
         </ul>
       </div>
 
       <div>
-        <PageHeader title="My Bookings" />
+        <PageHeader
+          title="My Bookings"
+          subtitle="Reservations you've made in advance. Cancel any time before you start charging."
+        />
         <ul className="space-y-3">
           {bookings.map((b) => (
             <Card key={b.id} className="p-4">
@@ -166,7 +180,7 @@ export default function BookingsPage() {
               </div>
             </Card>
           ))}
-          {bookings.length === 0 && <EmptyState>No bookings yet.</EmptyState>}
+          {bookings.length === 0 && <EmptyState>No upcoming bookings — walk-in sessions won&apos;t show up here.</EmptyState>}
         </ul>
       </div>
 

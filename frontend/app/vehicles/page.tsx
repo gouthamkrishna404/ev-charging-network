@@ -49,7 +49,10 @@ export default function VehiclesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Vehicles" />
+      <PageHeader
+        title="My Vehicles"
+        subtitle="Add every EV you drive — we use the model to know which connectors it can use, so incompatible ones are ruled out automatically when you book."
+      />
 
       <ul className="space-y-2">
         {vehicles.map((v) => (
@@ -60,7 +63,9 @@ export default function VehiclesPage() {
             <Badge status={v.vehicle_status} />
           </Card>
         ))}
-        {vehicles.length === 0 && <EmptyState>No vehicles yet.</EmptyState>}
+        {vehicles.length === 0 && (
+          <EmptyState>No vehicles yet — add one below, then head to Stations to book or start charging.</EmptyState>
+        )}
       </ul>
 
       <Card className="p-4 max-w-sm">

@@ -45,16 +45,19 @@ export default function PlansPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Charging Plans" subtitle="Subscribe for a discount on every session." />
+      <PageHeader
+        title="Charging Plans"
+        subtitle="Subscribe once and the discount is applied to every bill automatically — no codes, nothing to remember at checkout."
+      />
       {message && <Alert type={message.type}>{message.text}</Alert>}
 
       {activeSubscription && (
-        <Card className="p-4 bg-slate-50">
+        <div className="rounded-lg border border-slate-200 shadow-sm p-4 bg-slate-50">
           <p className="text-sm">
             Active plan: <span className="font-medium">{plans.find((p) => p.id === activeSubscription.plan_id)?.plan_name}</span>{" "}
             until {activeSubscription.end_date} <Badge status={activeSubscription.status} />
           </p>
-        </Card>
+        </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
