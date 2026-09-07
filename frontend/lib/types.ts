@@ -68,6 +68,8 @@ export interface Booking {
   id: number;
   vehicle_id: number;
   connector_id: number;
+  station_name: string;
+  connector_type_name: string;
   booking_time: string;
   start_time: string;
   end_time: string;
@@ -80,6 +82,8 @@ export interface Session {
   booking_id: number | null;
   connector_id: number;
   connector_power_kw: string;
+  station_name: string;
+  connector_type_name: string;
   vehicle_id: number;
   start_time: string;
   end_time: string | null;
@@ -109,6 +113,8 @@ export interface Payment {
 export interface Bill {
   id: number;
   session_id: number;
+  station_name: string;
+  connector_type_name: string;
   energy_charge: string;
   subscription_discount: string;
   tax_amount: string;

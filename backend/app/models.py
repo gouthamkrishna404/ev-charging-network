@@ -301,6 +301,14 @@ class Booking(Base):
     connector = relationship("Connector", back_populates="bookings")
     session = relationship("ChargingSession", back_populates="booking", uselist=False)
 
+    @property
+    def station_name(self) -> str:
+        return self.connector.charger.station.station_name
+
+    @property
+    def connector_type_name(self) -> str:
+        return self.connector.connector_type_name
+
 
 class ChargingSession(Base):
     __tablename__ = "charging_sessions"
@@ -335,6 +343,14 @@ class ChargingSession(Base):
     def connector_power_kw(self):
         return self.connector.max_power_kw
 
+    @property
+    def station_name(self) -> str:
+        return self.connector.charger.station.station_name
+
+    @property
+    def connector_type_name(self) -> str:
+        return self.connector.connector_type_name
+
 
 class MeterReading(Base):
     __tablename__ = "meter_readings"
@@ -363,6 +379,14 @@ class Bill(Base):
 
     session = relationship("ChargingSession", back_populates="bill")
     payment = relationship("Payment", back_populates="bill", uselist=False)
+
+    @property
+    def station_name(self) -> str:
+        return self.session.station_name
+
+    @property
+    def connector_type_name(self) -> str:
+        return self.session.connector_type_name
 
 
 class ChargingPlan(Base):

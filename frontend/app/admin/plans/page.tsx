@@ -83,7 +83,7 @@ function AdminPlansContent() {
     <div className="space-y-6">
       <PageHeader
         title="Charging Plans"
-        subtitle="Subscription plans drivers can buy for a discount at your stations specifically — other networks' subscribers don't get your discount, and vice versa."
+        subtitle="Subscription plans you sell. The discount is a network-wide perk — once a driver subscribes to any plan, it applies at every operator's stations, not just yours."
       />
 
       <ul className="space-y-2">

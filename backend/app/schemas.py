@@ -195,6 +195,8 @@ class BookingOut(BaseModel):
     id: int
     vehicle_id: int
     connector_id: int
+    station_name: str
+    connector_type_name: str
     booking_time: datetime
     start_time: datetime
     end_time: datetime
@@ -216,6 +218,8 @@ class SessionOut(BaseModel):
     booking_id: int | None
     connector_id: int
     connector_power_kw: Decimal
+    station_name: str
+    connector_type_name: str
     vehicle_id: int
     start_time: datetime
     end_time: datetime | None
@@ -262,6 +266,8 @@ class BillOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     session_id: int
+    station_name: str
+    connector_type_name: str
     energy_charge: Decimal
     subscription_discount: Decimal
     tax_amount: Decimal

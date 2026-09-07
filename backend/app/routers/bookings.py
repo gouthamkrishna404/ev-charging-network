@@ -1,15 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
 from app.compatibility import check_connector_compatible
 from app.database import get_db
-from app.models import Booking, Connector, User, Vehicle
+from app.models import Booking, Charger, Connector, User, Vehicle
 from app.notifications import notify
 from app.schemas import BookingCreate, BookingOut
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
+
+
+def _booking_query(db: Session):
+    return db.query(Booking).options(
+        joinedload(Booking.connector).joinedload(Connector.connector_type),
+        joinedload(Booking.connector).joinedload(Connector.charger).joinedload(Charger.station),
+    )
 
 
 def _check_operating_hours(connector: Connector, start, end):
@@ -87,7 +94,7 @@ def create_booking(
 
 @router.get("/me", response_model=list[BookingOut])
 def list_my_bookings(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(Booking).filter(Booking.user_id == current_user.id).order_by(Booking.start_time.desc()).all()
+    return _booking_query(db).filter(Booking.user_id == current_user.id).order_by(Booking.start_time.desc()).all()
 
 
 @router.post("/{booking_id}/cancel", response_model=BookingOut)

@@ -69,8 +69,10 @@ App at http://localhost:3000.
 
 ## Demo accounts (from the seed script)
 
-The seed script creates two competing operators, 13 stations across 7 cities,
-14 drivers, and ~90 days of randomized (but reproducible) historical activity.
+The seed script creates two competing operators, 17 stations across 7 cities
+(Chennai gets the deepest coverage — 6 stations across both operators, handy
+for testing the "nearby stations" geolocation feature), 14 drivers, and ~90
+days of randomized (but reproducible) historical activity.
 
 - Driver: `driver@example.com` / `Password123!`
 - Admin (Volt Grid Networks): `admin@voltgrid.example` / `Password123!`
@@ -80,11 +82,12 @@ The seed script creates two competing operators, 13 stations across 7 cities,
 
 **Driver**: register/login, manage vehicles, browse stations on an
 interactive clustered map with filters (connector type, city, availability,
-price/rating/distance sorting, "use my location"), book a connector or start
-a walk-in session, watch a live energy estimate during a session, end a
-session, view/pay bills (with subscription discount applied automatically),
-request refunds, subscribe to a charging plan, and receive notifications on
-key events.
+price/rating/distance sorting, automatic "nearby stations" via geolocation),
+book a connector or start a walk-in session, watch a live energy estimate
+during a session, end a session, view/pay itemized bills, request refunds,
+and subscribe to a charging plan — one active subscription at a time, whose
+discount applies network-wide at any operator's stations, not just the one
+that sold it — and receive notifications on key events.
 
 **Admin**: register a new operator (self-serve, creates the operator's first
 super-admin), add teammates and assign them to specific stations, create and

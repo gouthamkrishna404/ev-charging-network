@@ -1,11 +1,11 @@
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import Bill, ChargingSession, Payment, Refund, Subscription, User
+from app.models import Bill, Charger, ChargingSession, Connector, Payment, Refund, Subscription, User
 from app.notifications import notify
 from app.schemas import BillOut, PaymentCreate, PaymentOut, RefundOut, RefundRequest
 
@@ -17,6 +17,13 @@ def list_my_bills(current_user: User = Depends(get_current_user), db: Session = 
     return (
         db.query(Bill)
         .join(ChargingSession)
+        .options(
+            joinedload(Bill.session).joinedload(ChargingSession.connector).joinedload(Connector.connector_type),
+            joinedload(Bill.session)
+            .joinedload(ChargingSession.connector)
+            .joinedload(Connector.charger)
+            .joinedload(Charger.station),
+        )
         .filter(ChargingSession.user_id == current_user.id)
         .order_by(Bill.generated_date.desc())
         .all()

@@ -174,6 +174,14 @@ STATION_SPECS = [
      Decimal("11.00"), "standard_6_days", ["fast_dc", "ac_slow"]),
     ("chargenow", "ChargeNow - Anna Nagar", "2nd Avenue, Anna Nagar", "Chennai", "Tamil Nadu", "13.085000", "80.210100",
      Decimal("11.20"), "always_open", ["ac_slow", "ac_compact"]),
+    ("chargenow", "ChargeNow - T Nagar", "Usman Road, T Nagar", "Chennai", "Tamil Nadu", "13.041800", "80.234100",
+     Decimal("11.50"), "commercial", ["fast_dc", "ac_slow"]),
+    ("chargenow", "ChargeNow - Velachery", "Velachery Main Road", "Chennai", "Tamil Nadu", "12.979100", "80.221200",
+     Decimal("10.80"), "standard_6_days", ["ac_slow", "ac_compact"]),
+    ("volt_grid", "Volt Grid - Adyar", "Lattice Bridge Road, Adyar", "Chennai", "Tamil Nadu", "13.001200", "80.256500",
+     Decimal("12.00"), "extended", ["fast_dc", "ac_slow"]),
+    ("volt_grid", "Volt Grid - Nungambakkam", "Nungambakkam High Road", "Chennai", "Tamil Nadu", "13.056900", "80.242500",
+     Decimal("12.80"), "always_open", ["fast_dc", "fast_dc_dual", "ac_slow"]),
 ]
 
 
@@ -379,7 +387,9 @@ def run():
         demo_vehicle = vehicles_by_user[demo_user.id][0]
 
         # ---------- Subscriptions ----------
-        subs_index: dict[tuple[int, int], list[tuple]] = {}
+        # A subscription's discount is sitewide (applies at any operator's stations), so
+        # each user carries at most one -- keyed by user_id only, not (user_id, operator_id).
+        subs_index: dict[int, list[tuple]] = {}
         all_plans = plans["volt_grid"] + plans["chargenow"]
         today = date.today()
 
@@ -396,7 +406,7 @@ def run():
                 payment_method=rng.choice(["card", "upi", "wallet", "net_banking"]),
                 payment_status="successful", transaction_reference=f"SIM-SUB{sub.id:05d}",
             ))
-            subs_index.setdefault((user.id, plan.operator_id), []).append((start_date, end_date, plan.discount_percentage))
+            subs_index.setdefault(user.id, []).append((start_date, end_date, plan.discount_percentage))
             return sub
 
         # Demo Driver keeps the specific Premium subscription used in the walkthrough narrative.
@@ -410,8 +420,8 @@ def run():
             _create_subscription(user, plan, start_date, force_status=status_override)
         db.flush()
 
-        def _active_discount(user_id: int, operator_id: int, on_date: date) -> Decimal | None:
-            for start_date, end_date, discount in subs_index.get((user_id, operator_id), []):
+        def _active_discount(user_id: int, on_date: date) -> Decimal | None:
+            for start_date, end_date, discount in subs_index.get(user_id, []):
                 if start_date <= on_date <= end_date:
                     return discount
             return None
@@ -483,7 +493,7 @@ def run():
                 ))
 
                 energy_charge = (energy * info["price_per_kwh"]).quantize(Decimal("0.01"))
-                discount_pct = _active_discount(user.id, info["operator"].id, start_time.date())
+                discount_pct = _active_discount(user.id, start_time.date())
                 discount = (energy_charge * discount_pct / 100).quantize(Decimal("0.01")) if discount_pct else Decimal("0.00")
                 taxable = energy_charge - discount
                 tax = (taxable * TAX_RATE).quantize(Decimal("0.01"))

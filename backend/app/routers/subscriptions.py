@@ -39,6 +39,8 @@ def subscribe(
     if plan is None or plan.status != "active":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
 
+    # A subscription's discount is sitewide (applies at any operator's stations), so a
+    # driver can only have one active subscription at a time -- not one per operator.
     existing = (
         db.query(Subscription)
         .join(ChargingPlan, Subscription.plan_id == ChargingPlan.id)
@@ -46,14 +48,13 @@ def subscribe(
             Subscription.user_id == current_user.id,
             Subscription.status == "active",
             Subscription.end_date >= date.today(),
-            ChargingPlan.operator_id == plan.operator_id,
         )
         .first()
     )
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"You already have an active {plan.operator_name} subscription",
+            detail=f"You already have an active {existing.plan.plan_name} subscription — cancel it before subscribing to another",
         )
 
     subscription = Subscription(

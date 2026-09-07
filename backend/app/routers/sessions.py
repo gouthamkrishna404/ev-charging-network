@@ -2,16 +2,23 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
 from app.compatibility import check_connector_compatible
 from app.database import get_db
-from app.models import Bill, Booking, ChargingPlan, ChargingSession, Connector, MeterReading, Subscription, User, Vehicle
+from app.models import Bill, Booking, Charger, ChargingSession, Connector, MeterReading, Subscription, User, Vehicle
 from app.notifications import notify
 from app.schemas import BillOut, MeterReadingCreate, MeterReadingOut, SessionOut, SessionStart
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
+
+
+def _session_query(db: Session):
+    return db.query(ChargingSession).options(
+        joinedload(ChargingSession.connector).joinedload(Connector.connector_type),
+        joinedload(ChargingSession.connector).joinedload(Connector.charger).joinedload(Charger.station),
+    )
 
 TAX_RATE = Decimal("0.05")  # flat 5% tax for MVP demo purposes
 
@@ -60,15 +67,16 @@ def start_session(
     return charging_session
 
 
-def _active_subscription(db: Session, user_id: int, operator_id: int) -> Subscription | None:
+def _active_subscription(db: Session, user_id: int) -> Subscription | None:
+    # A subscription's discount is a sitewide perk -- it applies at any station on the
+    # network, not just the operator that sold the plan. Only one subscription can be
+    # active at a time (enforced at subscribe-time), so there's no operator to match on.
     return (
         db.query(Subscription)
-        .join(ChargingPlan, Subscription.plan_id == ChargingPlan.id)
         .filter(
             Subscription.user_id == user_id,
             Subscription.status == "active",
             Subscription.end_date >= date.today(),
-            ChargingPlan.operator_id == operator_id,
         )
         .first()
     )
@@ -114,7 +122,7 @@ def end_session(
 
     energy_charge = (energy_delivered_kwh * tariff.price_per_kwh).quantize(Decimal("0.01"))
 
-    subscription = _active_subscription(db, current_user.id, charging_session.connector.charger.station.operator_id)
+    subscription = _active_subscription(db, current_user.id)
     subscription_discount = Decimal("0.00")
     if subscription is not None:
         subscription_discount = (energy_charge * subscription.plan.discount_percentage / 100).quantize(Decimal("0.01"))
@@ -145,7 +153,7 @@ def end_session(
 @router.get("/me", response_model=list[SessionOut])
 def list_my_sessions(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return (
-        db.query(ChargingSession)
+        _session_query(db)
         .filter(ChargingSession.user_id == current_user.id)
         .order_by(ChargingSession.start_time.desc())
         .all()

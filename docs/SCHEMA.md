@@ -61,10 +61,17 @@ naming fixes applied throughout):
   reference — the discount a past bill applied shouldn't change if the plan
   changes later). `charging_plans.operator_id` was added after the fact, for
   the same reason as `technicians.operator_id` below: a plan with no operator
-  meant any subscriber's discount applied at *any* station on the whole
-  marketplace, including competing operators who never agreed to honor it.
-  Plans, and the discount check at billing time, are now scoped per operator
-  — a user can hold one active subscription per operator simultaneously.
+  meant an *operator admin* could see and manage another operator's plans
+  through the admin API, a genuine multi-tenancy leak on the write side.
+  That scoping stays — plan creation, pricing, and `/admin/plans` are still
+  per-operator, so each operator only ever sees and prices their own plans.
+  The *discount*, however, is a deliberate sitewide product decision, not a
+  leak: once a driver holds an active subscription (to any operator's plan),
+  its `discount_percentage` applies at billing time regardless of which
+  operator's station the session happened at — `_active_subscription()` in
+  `app/routers/sessions.py` doesn't filter by operator. Because the perk is
+  sitewide, a user can only hold one active subscription at a time (enforced
+  at `POST /subscriptions`), not one per operator.
 - **`station_operating_hours`** — per-day open/close times. A station with no
   rows is treated as open at all times (opt-in, not opt-out); `bookings` are
   rejected outside a station's configured hours for that day.

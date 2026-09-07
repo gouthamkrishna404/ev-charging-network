@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CreditCard, Receipt, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BadgeIndianRupee, CreditCard, Receipt, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Bill } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, IconTile, Input, PageHeader, Skeleton } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, IconTile, Input, PageHeader, Skeleton, Stat } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function BillsPage() {
@@ -62,26 +62,84 @@ function BillsContent() {
     }
   }
 
+  const sortedBills = useMemo(() => {
+    if (!bills) return null;
+    return [...bills].sort((a, b) => {
+      if (!a.payment !== !b.payment) return a.payment ? 1 : -1;
+      return new Date(b.generated_date).getTime() - new Date(a.generated_date).getTime();
+    });
+  }, [bills]);
+
+  const totals = useMemo(() => {
+    const paid = (bills ?? []).filter((b) => b.payment?.payment_status === "successful");
+    const unpaid = (bills ?? []).filter((b) => !b.payment);
+    return {
+      totalSpent: paid.reduce((sum, b) => sum + Number(b.total_amount), 0),
+      totalSaved: (bills ?? []).reduce((sum, b) => sum + Number(b.subscription_discount), 0),
+      unpaidCount: unpaid.length,
+      unpaidAmount: unpaid.reduce((sum, b) => sum + Number(b.total_amount), 0),
+    };
+  }, [bills]);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="My Bills"
-        subtitle="One bill per charging session, generated the moment you end it. Active subscription discounts are applied automatically before tax."
+        subtitle="One bill per charging session, generated the moment you end it. Active subscription discounts are applied automatically before tax — network-wide, no matter which operator's station you're at."
       />
+
+      {bills === null && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-20" />
+          ))}
+        </div>
+      )}
+
+      {bills !== null && bills.length > 0 && (
+        <Card className="p-5 flex flex-wrap gap-8">
+          <Stat value={`₹${totals.totalSpent.toFixed(2)}`} label="total spent" />
+          <Stat value={`₹${totals.totalSaved.toFixed(2)}`} label="saved via subscription" />
+          {totals.unpaidCount > 0 && (
+            <Stat value={`₹${totals.unpaidAmount.toFixed(2)}`} label={`due on ${totals.unpaidCount} bill${totals.unpaidCount > 1 ? "s" : ""}`} />
+          )}
+        </Card>
+      )}
+
       <ul className="space-y-3">
-        {bills === null && [...Array(3)].map((_, i) => <Skeleton key={i} className="h-[76px]" />)}
-        {bills?.map((bill) => (
-          <Card key={bill.id} className="p-4">
-            <div className="flex items-start gap-3">
+        {sortedBills?.map((bill) => (
+          <Card key={bill.id} className={`p-4 ${!bill.payment ? "border-amber-200 ring-1 ring-amber-100" : ""}`}>
+            <div className="flex flex-wrap items-start gap-3">
               <IconTile icon={Receipt} tone={bill.payment ? "slate" : "amber"} />
-              <div className="flex-1 min-w-0 text-sm">
-                <p className="text-slate-900">
-                  Session #{bill.session_id} — energy ₹{bill.energy_charge}
-                  {Number(bill.subscription_discount) > 0 && <> − discount ₹{bill.subscription_discount}</>} + tax ₹
-                  {bill.tax_amount} = <span className="font-semibold">₹{bill.total_amount}</span>
+              <div className="flex-1 min-w-[160px]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-medium text-slate-900">{bill.station_name}</p>
+                  {Number(bill.subscription_discount) > 0 && (
+                    <span className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 rounded-full px-2 py-0.5">
+                      <Sparkles size={10} /> discount applied
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {bill.connector_type_name} · {new Date(bill.generated_date).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
                 </p>
-                <p className="text-slate-400 text-xs mt-0.5">{new Date(bill.generated_date).toLocaleString()}</p>
+
+                <div className="mt-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm max-w-xs">
+                  <span className="text-slate-500">Energy</span>
+                  <span className="text-right text-slate-700">₹{bill.energy_charge}</span>
+                  {Number(bill.subscription_discount) > 0 && (
+                    <>
+                      <span className="text-emerald-600">Subscription discount</span>
+                      <span className="text-right text-emerald-600">−₹{bill.subscription_discount}</span>
+                    </>
+                  )}
+                  <span className="text-slate-500">Tax</span>
+                  <span className="text-right text-slate-700">₹{bill.tax_amount}</span>
+                  <span className="font-semibold text-slate-900 border-t border-slate-100 pt-1">Total</span>
+                  <span className="text-right font-semibold text-slate-900 border-t border-slate-100 pt-1">₹{bill.total_amount}</span>
+                </div>
               </div>
+
               <div className="flex flex-col items-end gap-1.5 shrink-0">
                 {bill.payment ? (
                   <>
@@ -114,7 +172,7 @@ function BillsContent() {
           </Card>
         ))}
         {bills?.length === 0 && (
-          <EmptyState icon={Receipt}>No bills yet — they appear automatically once you end a charging session.</EmptyState>
+          <EmptyState icon={BadgeIndianRupee}>No bills yet — they appear automatically once you end a charging session.</EmptyState>
         )}
       </ul>
     </div>

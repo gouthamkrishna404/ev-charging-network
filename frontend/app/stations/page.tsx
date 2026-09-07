@@ -3,7 +3,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import { LocateFixed, MapPin, Search, SlidersHorizontal, Star, Tag, Zap } from "lucide-react";
+import { LocateFixed, MapPin, Navigation, Search, SlidersHorizontal, Star, Tag, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Station } from "@/lib/types";
@@ -32,6 +32,21 @@ export default function StationsPage() {
     apiFetch<Station[]>("/stations")
       .then(setStations)
       .catch(() => toast.error("Couldn't load stations. Try refreshing."));
+  }, []);
+
+  // Try to locate the driver as soon as the page loads -- silently, so a denied/blocked
+  // permission doesn't interrupt anyone who didn't ask for it. The explicit "Use my
+  // location" button below covers the case where this silent attempt didn't succeed.
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setSortBy((current) => (current === "recommended" ? "distance" : current));
+      },
+      () => {},
+      { timeout: 8000, maximumAge: 5 * 60 * 1000 }
+    );
   }, []);
 
   const cityOptions = useMemo(
@@ -133,12 +148,45 @@ export default function StationsPage() {
 
   const activeFilterCount = (city !== "all" ? 1 : 0) + connectorTypes.size + (availableOnly ? 1 : 0);
 
+  const nearby = useMemo(() => {
+    if (!userLocation) return [];
+    return [...enriched]
+      .filter((e) => e.distanceKm !== null)
+      .sort((a, b) => a.distanceKm! - b.distanceKm!)
+      .slice(0, 4);
+  }, [enriched, userLocation]);
+
   return (
     <div>
       <PageHeader
         title="Charging Stations"
         subtitle={`${stations?.length ?? "…"} stations across ${cityOptions.length || "several"} cities from every operator on the network.`}
       />
+
+      {nearby.length > 0 && (
+        <div className="mb-6 animate-fade-in-up">
+          <div className="flex items-center gap-1.5 mb-2.5">
+            <Navigation size={14} className="text-indigo-500" />
+            <p className="text-sm font-semibold text-slate-700">Nearby stations</p>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {nearby.map(({ station: s, distanceKm, availableCount, connectorCount }) => (
+              <Link key={s.id} href={`/stations/${s.id}`} className="shrink-0 w-56">
+                <Card className="p-3.5 h-full" interactive>
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 mb-1.5">
+                    <Navigation size={11} /> {formatDistance(distanceKm!)} away
+                  </div>
+                  <p className="text-sm font-medium text-slate-900 truncate">{s.station_name}</p>
+                  <p className="text-xs text-slate-400 truncate mt-0.5">{s.location.city}</p>
+                  <p className={`text-xs font-medium mt-1.5 ${availableCount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
+                    {availableCount} / {connectorCount} available
+                  </p>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {stations && stations.length > 0 && (
         <Card className="mb-6 p-2 overflow-hidden">
