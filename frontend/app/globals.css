@@ -17,6 +17,10 @@
 
 body {
   font-feature-settings: "cv11", "ss01";
+  /* .full-bleed sections size themselves with 100vw, which is a hair wider
+     than 100% on browsers where vw includes the scrollbar gutter -- clip that
+     sliver here instead of letting it show up as page-wide horizontal scroll. */
+  overflow-x: hidden;
 }
 
 /* The app's canvas, dark by default everywhere -- not just a hero section.
@@ -35,6 +39,18 @@ body {
     radial-gradient(900px 600px at -10% 105%, color-mix(in srgb, var(--color-violet-500) 12%, transparent), transparent 55%);
   background-attachment: fixed;
   background-repeat: no-repeat;
+}
+
+/* Breaks an element out of an ancestor's max-width (e.g. main's max-w-6xl)
+   all the way to the real viewport edges, not just out of that ancestor's own
+   padding -- a `-mx-4` negative margin only cancels padding, it can't escape
+   a max-width above it, so on a wide viewport a "full-bleed" hero built that
+   way still stops at the centered column's edge with empty canvas on both
+   sides. This works regardless of how deeply the element is nested. */
+.full-bleed {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
 }
 
 /* Slim, dark-appropriate scrollbar so the browser chrome doesn't clash with
