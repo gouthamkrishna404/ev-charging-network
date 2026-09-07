@@ -47,7 +47,7 @@ export default function RegisterOperatorPage() {
         <span className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center mb-3">
           <Building2 size={20} className="text-amber-600" strokeWidth={2} />
         </span>
-        <h1 className="text-xl font-semibold text-slate-900 tracking-tight text-center">Register your charging network</h1>
+        <h1 className="font-display text-xl font-semibold text-slate-900 tracking-tight text-center">Register your charging network</h1>
         <p className="text-sm text-slate-500 mt-1.5 text-center max-w-sm">
           This creates your operator account and a super-admin login for you. You can add more admins and
           stations once you&apos;re in.

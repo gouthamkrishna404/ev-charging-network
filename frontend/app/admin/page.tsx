@@ -24,6 +24,7 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
@@ -31,6 +32,8 @@ import { ConnectorTypeOut, Station } from "@/lib/types";
 import { AdminBooking, AdminRefund, AnalyticsOverview, Maintenance, Revenue, Technician, TeamAdmin } from "@/lib/admin-types";
 import { Alert, Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select, Stat, StatCard, Tabs } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
+
+const StationsMap = dynamic(() => import("@/components/StationsMap"), { ssr: false });
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const TABS = [
@@ -323,6 +326,10 @@ function AdminContent() {
           <Link href="/admin/analytics" className="flex items-center justify-between gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 -mt-2">
             Full analytics, trends &amp; breakdowns <ArrowRight size={14} />
           </Link>
+
+          <Card className="overflow-hidden p-0">
+            <StationsMap stations={stations} height="260px" />
+          </Card>
 
           {pendingRefunds.length > 0 && (
             <Link href="/admin/refunds">

@@ -39,7 +39,7 @@ export default function RegisterPage() {
         <span className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center mb-3">
           <Car size={20} className="text-indigo-600" strokeWidth={2} />
         </span>
-        <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Create your driver account</h1>
+        <h1 className="font-display text-xl font-semibold text-slate-900 tracking-tight">Create your driver account</h1>
         <p className="text-sm text-slate-500 mt-1">Free — start browsing stations right away.</p>
       </div>
       <Card className="p-6">

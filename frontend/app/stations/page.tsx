@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
-import { List, LocateFixed, Map as MapIcon, MapPin, Navigation, Search, SlidersHorizontal, Star, Tag, Zap } from "lucide-react";
+import type { LatLngBounds } from "leaflet";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { LocateFixed, MapPin, Navigation, RefreshCw, Search, SlidersHorizontal, Star, Tag, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Station } from "@/lib/types";
 import { formatDistance, haversineKm } from "@/lib/geo";
-import { Card, Chip, EmptyState, IconTile, Input, PageHeader, SegmentedControl, Select, Skeleton, Switch } from "@/components/ui";
+import { Card, Chip, EmptyState, IconTile, Input, PageHeader, Select, Skeleton, Switch } from "@/components/ui";
+import DraggableSheet, { SnapPoint } from "@/components/DraggableSheet";
 
 const StationsMap = dynamic(() => import("@/components/StationsMap"), {
   ssr: false,
@@ -16,6 +18,62 @@ const StationsMap = dynamic(() => import("@/components/StationsMap"), {
 });
 
 type SortKey = "recommended" | "price_asc" | "rating_desc" | "distance";
+type Enriched = { station: Station; connectorCount: number; availableCount: number; distanceKm: number | null };
+
+function StationCard({ item, selected, onHover }: { item: Enriched; selected?: boolean; onHover?: () => void }) {
+  const { station: s, connectorCount, availableCount, distanceKm } = item;
+  const pct = connectorCount ? Math.round((availableCount / connectorCount) * 100) : 0;
+  return (
+    <Link href={`/stations/${s.id}`} onMouseEnter={onHover}>
+      <Card className={`p-4 h-full ${selected ? "ring-2 ring-indigo-400" : ""}`} interactive>
+        <div className="flex items-start gap-3">
+          <IconTile icon={Zap} tone={availableCount > 0 ? "indigo" : "slate"} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <p className="font-medium text-slate-900 truncate">{s.station_name}</p>
+              {s.avg_rating !== null && (
+                <span className="flex items-center gap-0.5 text-xs text-amber-600 shrink-0">
+                  <Star size={11} fill="currentColor" /> {s.avg_rating}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-1 truncate">
+              <MapPin size={12} className="shrink-0" />
+              {s.location.address_line}, {s.location.city}
+              {distanceKm !== null && <span className="text-slate-400 shrink-0"> · {formatDistance(distanceKm)}</span>}
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">{s.operator_name}</p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1">
+          {Array.from(new Set(s.chargers.flatMap((c) => c.connectors.map((con) => con.connector_type_name)))).map((type) => (
+            <span key={type} className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">
+              {type}
+            </span>
+          ))}
+        </div>
+        <div className="mt-3 space-y-1.5">
+          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${availableCount > 0 ? "bg-emerald-500" : "bg-slate-300"}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-medium ${availableCount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
+              {availableCount} / {connectorCount} available
+            </span>
+            {s.tariff && (
+              <span className="text-xs text-slate-500 flex items-center gap-1">
+                <Tag size={11} />₹{s.tariff.price_per_kwh}/kWh
+              </span>
+            )}
+          </div>
+        </div>
+      </Card>
+    </Link>
+  );
+}
 
 export default function StationsPage() {
   const [stations, setStations] = useState<Station[] | null>(null);
@@ -27,8 +85,10 @@ export default function StationsPage() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [sheetSnap, setSheetSnap] = useState<SnapPoint>("peek");
+  const [viewportBounds, setViewportBounds] = useState<LatLngBounds | null>(null);
+  const [areaFilterBounds, setAreaFilterBounds] = useState<LatLngBounds | null>(null);
 
   useEffect(() => {
     apiFetch<Station[]>("/stations")
@@ -79,6 +139,7 @@ export default function StationsPage() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setAreaFilterBounds(null);
         setSortBy("distance");
         setLocating(false);
         toast.success("Location found — sorting stations by distance.");
@@ -90,6 +151,8 @@ export default function StationsPage() {
       { timeout: 8000 }
     );
   }
+
+  const handleViewportChanged = useCallback((bounds: LatLngBounds) => setViewportBounds(bounds), []);
 
   const enriched = useMemo(
     () =>
@@ -125,6 +188,9 @@ export default function StationsPage() {
         const types = new Set(station.chargers.flatMap((c) => c.connectors.map((con) => con.connector_type_name)));
         if (![...connectorTypes].some((t) => types.has(t))) return false;
       }
+      if (areaFilterBounds && station.location.latitude && station.location.longitude) {
+        if (!areaFilterBounds.contains([Number(station.location.latitude), Number(station.location.longitude)])) return false;
+      }
       return true;
     });
 
@@ -146,7 +212,7 @@ export default function StationsPage() {
     });
 
     return list;
-  }, [enriched, query, city, availableOnly, connectorTypes, sortBy]);
+  }, [enriched, query, city, availableOnly, connectorTypes, sortBy, areaFilterBounds]);
 
   const activeFilterCount = (city !== "all" ? 1 : 0) + connectorTypes.size + (availableOnly ? 1 : 0);
 
@@ -158,213 +224,276 @@ export default function StationsPage() {
       .slice(0, 4);
   }, [enriched, userLocation]);
 
-  return (
-    <div>
-      <PageHeader
-        title="Charging Stations"
-        subtitle={`${stations?.length ?? "…"} stations across ${cityOptions.length || "several"} cities from every operator on the network.`}
-      />
-
-      {nearby.length > 0 && (
-        <div className="mb-6 animate-fade-in-up">
-          <div className="flex items-center gap-1.5 mb-2.5">
-            <Navigation size={14} className="text-indigo-500" />
-            <p className="text-sm font-semibold text-slate-700">Nearby stations</p>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {nearby.map(({ station: s, distanceKm, availableCount, connectorCount }) => (
-              <Link key={s.id} href={`/stations/${s.id}`} className="shrink-0 w-56">
-                <Card className="p-3.5 h-full" interactive>
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 mb-1.5">
-                    <Navigation size={11} /> {formatDistance(distanceKm!)} away
-                  </div>
-                  <p className="text-sm font-medium text-slate-900 truncate">{s.station_name}</p>
-                  <p className="text-xs text-slate-400 truncate mt-0.5">{s.location.city}</p>
-                  <p className={`text-xs font-medium mt-1.5 ${availableCount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
-                    {availableCount} / {connectorCount} available
-                  </p>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="mb-5 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="Search by name, city, or operator…"
-              className="w-full pl-9"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`inline-flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-lg border transition-colors ${
-              showFilters || activeFilterCount > 0
-                ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                : "border-slate-300 text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            <SlidersHorizontal size={14} />
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="bg-indigo-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-          <Select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} className="shrink-0">
-            <option value="recommended">Sort: Recommended</option>
-            <option value="price_asc">Sort: Price, low to high</option>
-            <option value="rating_desc">Sort: Highest rated</option>
-            <option value="distance">Sort: Nearest to me</option>
-          </Select>
-          <button
-            onClick={useMyLocation}
-            disabled={locating}
-            className="inline-flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 shrink-0"
-          >
-            <LocateFixed size={14} className={locating ? "animate-pulse" : ""} />
-            {userLocation ? "Location set" : "Use my location"}
-          </button>
-          <SegmentedControl
-            className="lg:hidden shrink-0"
-            value={mobileView}
-            onChange={setMobileView}
-            options={[
-              { value: "list", label: "List", icon: List },
-              { value: "map", label: "Map", icon: MapIcon },
-            ]}
-          />
-        </div>
-
-        {showFilters && (
-          <Card className="p-4 space-y-3 animate-fade-in-up">
-            <div>
-              <p className="text-xs font-medium text-slate-500 mb-1.5">Connector type</p>
-              <div className="flex flex-wrap gap-1.5">
-                {connectorTypeOptions.map((type) => (
-                  <Chip key={type} active={connectorTypes.has(type)} onClick={() => toggleConnectorType(type)}>
-                    {type}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-4 pt-1">
-              <label className="flex items-center gap-2 text-sm">
-                <span className="text-xs font-medium text-slate-500">City</span>
-                <Select value={city} onChange={(e) => setCity(e.target.value)}>
-                  <option value="all">All cities</option>
-                  {cityOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </Select>
-              </label>
-              <Switch checked={availableOnly} onChange={setAvailableOnly} label="Available now" />
-            </div>
-          </Card>
-        )}
-      </div>
-
-      {stations === null && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="p-4 h-[104px] flex flex-col gap-2 justify-center">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-3 w-1/2" />
-              <Skeleton className="h-3 w-1/3" />
-            </Card>
+  const filtersPanel = (
+    <Card className="p-4 space-y-3 animate-fade-in-up">
+      <div>
+        <p className="text-xs font-medium text-slate-500 mb-1.5">Connector type</p>
+        <div className="flex flex-wrap gap-1.5">
+          {connectorTypeOptions.map((type) => (
+            <Chip key={type} active={connectorTypes.has(type)} onClick={() => toggleConnectorType(type)}>
+              {type}
+            </Chip>
           ))}
         </div>
-      )}
+      </div>
+      <div className="flex flex-wrap items-center gap-4 pt-1">
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-xs font-medium text-slate-500">City</span>
+          <Select value={city} onChange={(e) => setCity(e.target.value)}>
+            <option value="all">All cities</option>
+            {cityOptions.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <Switch checked={availableOnly} onChange={setAvailableOnly} label="Available now" />
+      </div>
+    </Card>
+  );
 
-      {stations !== null && (
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_480px] gap-5 items-start">
-          <div className={mobileView === "map" ? "hidden lg:block" : ""}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filtered.map(({ station: s, connectorCount, availableCount, distanceKm }, i) => {
-                const pct = connectorCount ? Math.round((availableCount / connectorCount) * 100) : 0;
-                return (
-                  <Link key={s.id} href={`/stations/${s.id}`} onMouseEnter={() => setSelectedId(s.id)}>
-                    <Card
-                      className={`p-4 h-full animate-fade-in-up ${selectedId === s.id ? "ring-2 ring-indigo-400" : ""}`}
-                      interactive
-                      style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <IconTile icon={Zap} tone={availableCount > 0 ? "indigo" : "slate"} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="font-medium text-slate-900 truncate">{s.station_name}</p>
-                            {s.avg_rating !== null && (
-                              <span className="flex items-center gap-0.5 text-xs text-amber-600 shrink-0">
-                                <Star size={11} fill="currentColor" /> {s.avg_rating}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-1 truncate">
-                            <MapPin size={12} className="shrink-0" />
-                            {s.location.address_line}, {s.location.city}
-                            {distanceKm !== null && <span className="text-slate-400 shrink-0"> · {formatDistance(distanceKm)}</span>}
-                          </p>
-                          <p className="text-xs text-slate-400 mt-0.5">{s.operator_name}</p>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {Array.from(new Set(s.chargers.flatMap((c) => c.connectors.map((con) => con.connector_type_name)))).map(
-                          (type) => (
-                            <span key={type} className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">
-                              {type}
-                            </span>
-                          )
-                        )}
-                      </div>
-                      <div className="mt-3 space-y-1.5">
-                        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${availableCount > 0 ? "bg-emerald-500" : "bg-slate-300"}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className={`text-xs font-medium ${availableCount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
-                            {availableCount} / {connectorCount} available
-                          </span>
-                          {s.tariff && (
-                            <span className="text-xs text-slate-500 flex items-center gap-1">
-                              <Tag size={11} />₹{s.tariff.price_per_kwh}/kWh
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
-                  </Link>
-                );
-              })}
+  return (
+    <div>
+      {/* ---------- Mobile: full-bleed map with a draggable sheet, map-first discovery ---------- */}
+      {/* Reserves real document height so the page can't scroll past the fixed overlay into
+          the footer -- a map screen like this has no business revealing the site footer. */}
+      <div className="md:hidden h-[calc(100vh-160px)]" aria-hidden />
+      <div className="md:hidden fixed inset-0 z-0">
+        {stations && (
+          <StationsMap
+            stations={filtered.map((f) => f.station)}
+            userLocation={userLocation}
+            selectedId={selectedId}
+            onSelect={(id) => {
+              setSelectedId(id);
+              setSheetSnap("peek");
+            }}
+            onViewportChanged={handleViewportChanged}
+            height="100vh"
+          />
+        )}
+      </div>
+      <div className="md:hidden fixed left-0 right-0 z-10 flex flex-col items-center gap-2 pointer-events-none" style={{ top: "calc(env(safe-area-inset-top,0px) + 68px)" }}>
+        {viewportBounds && (
+          <button
+            onClick={() => {
+              setAreaFilterBounds(viewportBounds);
+              setViewportBounds(null);
+            }}
+            className="pointer-events-auto inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-slate-900 rounded-full pl-3 pr-3.5 py-2 shadow-lg animate-fade-in-up"
+          >
+            <RefreshCw size={12} /> Search this area
+          </button>
+        )}
+      </div>
+      <button
+        onClick={useMyLocation}
+        disabled={locating}
+        className="md:hidden fixed right-4 z-10 w-11 h-11 rounded-full bg-white shadow-lg flex items-center justify-center text-slate-600 disabled:opacity-60"
+        style={{ bottom: "calc(64px + var(--safe-bottom) + 16px)" }}
+        aria-label="Use my location"
+      >
+        <LocateFixed size={18} className={locating ? "animate-pulse" : ""} />
+      </button>
+
+      <DraggableSheet
+        snap={sheetSnap}
+        onSnapChange={setSheetSnap}
+        header={
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <p className="font-display font-semibold text-slate-900">
+                {stations ? `${filtered.length} station${filtered.length === 1 ? "" : "s"}` : "Charging Stations"}
+              </p>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border ${
+                  activeFilterCount > 0 ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-300 text-slate-600"
+                }`}
+              >
+                <SlidersHorizontal size={12} />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="bg-indigo-600 text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
             </div>
-            {filtered.length === 0 && <EmptyState icon={Search}>No stations match your filters.</EmptyState>}
-            {stations.length === 0 && <EmptyState icon={Zap}>No stations found.</EmptyState>}
+            <div className="relative">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Search stations…"
+                className="w-full pl-9"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setSheetSnap((s) => (s === "peek" ? "half" : s))}
+              />
+            </div>
+            {areaFilterBounds && (
+              <button
+                onClick={() => setAreaFilterBounds(null)}
+                className="text-xs font-medium text-indigo-600 flex items-center gap-1"
+              >
+                Showing this area only · Clear
+              </button>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-3 pt-1">
+          {showFilters && filtersPanel}
+          {stations === null && [...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+          {stations && filtered.map((item) => (
+            <StationCard key={item.station.id} item={item} selected={selectedId === item.station.id} />
+          ))}
+          {stations && filtered.length === 0 && <EmptyState icon={Search}>No stations match your filters.</EmptyState>}
+        </div>
+      </DraggableSheet>
+
+      {/* ---------- Desktop: split list + sticky map ---------- */}
+      <div className="hidden md:block">
+        <PageHeader
+          title="Charging Stations"
+          subtitle={`${stations?.length ?? "…"} stations across ${cityOptions.length || "several"} cities from every operator on the network.`}
+        />
+
+        {nearby.length > 0 && (
+          <div className="mb-6 animate-fade-in-up">
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <Navigation size={14} className="text-indigo-500" />
+              <p className="text-sm font-semibold text-slate-700">Nearby stations</p>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {nearby.map(({ station: s, distanceKm, availableCount, connectorCount }) => (
+                <Link key={s.id} href={`/stations/${s.id}`} className="shrink-0 w-56">
+                  <Card className="p-3.5 h-full" interactive>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 mb-1.5">
+                      <Navigation size={11} /> {formatDistance(distanceKm!)} away
+                    </div>
+                    <p className="text-sm font-medium text-slate-900 truncate">{s.station_name}</p>
+                    <p className="text-xs text-slate-400 truncate mt-0.5">{s.location.city}</p>
+                    <p className={`text-xs font-medium mt-1.5 ${availableCount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
+                      {availableCount} / {connectorCount} available
+                    </p>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mb-5 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Search by name, city, or operator…"
+                className="w-full pl-9"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`inline-flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-lg border transition-colors ${
+                showFilters || activeFilterCount > 0
+                  ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                  : "border-slate-300 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <SlidersHorizontal size={14} />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="bg-indigo-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+            <Select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} className="shrink-0">
+              <option value="recommended">Sort: Recommended</option>
+              <option value="price_asc">Sort: Price, low to high</option>
+              <option value="rating_desc">Sort: Highest rated</option>
+              <option value="distance">Sort: Nearest to me</option>
+            </Select>
+            <button
+              onClick={useMyLocation}
+              disabled={locating}
+              className="inline-flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 shrink-0"
+            >
+              <LocateFixed size={14} className={locating ? "animate-pulse" : ""} />
+              {userLocation ? "Location set" : "Use my location"}
+            </button>
           </div>
 
-          <div className={`sticky top-20 ${mobileView === "list" ? "hidden lg:block" : ""}`}>
-            <Card className="overflow-hidden p-0">
-              <StationsMap
-                stations={filtered.map((f) => f.station)}
-                userLocation={userLocation}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                height="calc(100vh - 180px)"
-              />
-            </Card>
-          </div>
+          {areaFilterBounds && (
+            <button
+              onClick={() => setAreaFilterBounds(null)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 ring-1 ring-indigo-100 rounded-full px-3 py-1"
+            >
+              Showing stations in the map&apos;s current area only · Clear
+            </button>
+          )}
+
+          {showFilters && filtersPanel}
         </div>
-      )}
+
+        {stations === null && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="p-4 h-[104px] flex flex-col gap-2 justify-center">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-3 w-1/3" />
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {stations !== null && (
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_480px] gap-5 items-start">
+            <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {filtered.map((item) => (
+                  <StationCard
+                    key={item.station.id}
+                    item={item}
+                    selected={selectedId === item.station.id}
+                    onHover={() => setSelectedId(item.station.id)}
+                  />
+                ))}
+              </div>
+              {filtered.length === 0 && <EmptyState icon={Search}>No stations match your filters.</EmptyState>}
+              {stations.length === 0 && <EmptyState icon={Zap}>No stations found.</EmptyState>}
+            </div>
+
+            <div className="sticky top-20">
+              <Card className="overflow-hidden p-0 relative">
+                <StationsMap
+                  stations={filtered.map((f) => f.station)}
+                  userLocation={userLocation}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onViewportChanged={handleViewportChanged}
+                  height="calc(100vh - 180px)"
+                />
+                {viewportBounds && (
+                  <button
+                    onClick={() => {
+                      setAreaFilterBounds(viewportBounds);
+                      setViewportBounds(null);
+                    }}
+                    className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-full pl-3 pr-3.5 py-2 shadow-lg animate-fade-in-up"
+                  >
+                    <RefreshCw size={12} /> Search this area
+                  </button>
+                )}
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

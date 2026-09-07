@@ -16,7 +16,7 @@ if (typeof window !== "undefined") {
 require("leaflet.markercluster");
 
 import { useEffect, useRef, type MutableRefObject } from "react";
-import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { Station } from "@/lib/types";
 import { haversineKm, formatDistance } from "@/lib/geo";
 
@@ -151,9 +151,21 @@ function ClusterLayer({
 
 const NEARBY_RADIUS_KM = 75;
 
-function FitBounds({ stations, userLocation }: { stations: Station[]; userLocation: { lat: number; lng: number } | null }) {
+function FitBounds({
+  stations,
+  userLocation,
+  programmaticMoveRef,
+}: {
+  stations: Station[];
+  userLocation: { lat: number; lng: number } | null;
+  programmaticMoveRef: MutableRefObject<boolean>;
+}) {
   const map = useMap();
   useEffect(() => {
+    // Every fitBounds/setView call below is the map moving itself, not the driver --
+    // flag it so the viewport listener doesn't mistake it for a manual pan and pop up
+    // a "Search this area" button for a move nobody actually made.
+    programmaticMoveRef.current = true;
     // Once we know where the driver is, focus the map on them and whatever's actually
     // nearby -- fitting bounds to the entire (possibly nationwide) station list would
     // zoom back out and bury their location marker among every other pin on the map.
@@ -189,7 +201,7 @@ function FitBounds({ stations, userLocation }: { stations: Station[]; userLocati
       return;
     }
     map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 14 });
-  }, [map, stations, userLocation]);
+  }, [map, stations, userLocation, programmaticMoveRef]);
   return null;
 }
 
@@ -199,16 +211,19 @@ function SelectionSync({
   selectedId,
   markersRef,
   groupRef,
+  programmaticMoveRef,
 }: {
   selectedId: number | null;
   markersRef: MutableRefObject<Map<number, L.Marker>>;
   groupRef: MutableRefObject<L.MarkerClusterGroup | null>;
+  programmaticMoveRef: MutableRefObject<boolean>;
 }) {
   const map = useMap();
   useEffect(() => {
     if (selectedId === null) return;
     const marker = markersRef.current.get(selectedId);
     const group = groupRef.current;
+    programmaticMoveRef.current = true;
     if (!marker || !group) return;
     group.zoomToShowLayer(marker, () => {
       map.panTo(marker.getLatLng(), { animate: true });
@@ -219,21 +234,50 @@ function SelectionSync({
   return null;
 }
 
+function ViewportListener({
+  onChange,
+  programmaticMoveRef,
+}: {
+  onChange: (bounds: L.LatLngBounds) => void;
+  programmaticMoveRef: MutableRefObject<boolean>;
+}) {
+  const map = useMapEvents({
+    moveend: () => {
+      // A fitBounds/setView call fires moveend too -- skip exactly that one report
+      // rather than a blanket timer, so "Search this area" only ever reflects a
+      // pan/zoom the driver actually made, however long data took to arrive.
+      if (programmaticMoveRef.current) {
+        programmaticMoveRef.current = false;
+        return;
+      }
+      onChange(map.getBounds());
+    },
+  });
+  return null;
+}
+
 export default function StationsMap({
   stations,
   userLocation = null,
   selectedId = null,
   onSelect,
   height = "420px",
+  interactive = true,
+  onViewportChanged,
 }: {
   stations: Station[];
   userLocation?: { lat: number; lng: number } | null;
   selectedId?: number | null;
   onSelect?: (id: number) => void;
   height?: string;
+  /** false renders a calm, non-hijacking preview -- no scroll-zoom or zoom buttons -- for
+   * decorative contexts like the marketing hero, where the page should still scroll normally. */
+  interactive?: boolean;
+  onViewportChanged?: (bounds: L.LatLngBounds) => void;
 }) {
   const markersRef = useRef<Map<number, L.Marker>>(new Map());
   const groupRef = useRef<L.MarkerClusterGroup | null>(null);
+  const programmaticMoveRef = useRef(false);
 
   const withCoords = stations.filter((s) => s.location.latitude && s.location.longitude);
   if (withCoords.length === 0) return null;
@@ -249,7 +293,12 @@ export default function StationsMap({
     <MapContainer
       center={center}
       zoom={5}
-      scrollWheelZoom
+      scrollWheelZoom={interactive}
+      zoomControl={interactive}
+      dragging={interactive}
+      doubleClickZoom={interactive}
+      touchZoom={interactive}
+      attributionControl={interactive}
       style={{ height, width: "100%" }}
       className="rounded-2xl overflow-hidden"
     >
@@ -258,8 +307,9 @@ export default function StationsMap({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <ClusterLayer stations={withCoords} userLocation={userLocation} onSelect={onSelect} markersRef={markersRef} groupRef={groupRef} />
-      <FitBounds stations={withCoords} userLocation={userLocation} />
-      <SelectionSync selectedId={selectedId} markersRef={markersRef} groupRef={groupRef} />
+      <FitBounds stations={withCoords} userLocation={userLocation} programmaticMoveRef={programmaticMoveRef} />
+      <SelectionSync selectedId={selectedId} markersRef={markersRef} groupRef={groupRef} programmaticMoveRef={programmaticMoveRef} />
+      {onViewportChanged && <ViewportListener onChange={onViewportChanged} programmaticMoveRef={programmaticMoveRef} />}
       {userLocation && <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon()} />}
     </MapContainer>
   );

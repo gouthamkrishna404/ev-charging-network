@@ -45,7 +45,7 @@ export default function LoginPage() {
         <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30 mb-3">
           <Plug size={20} className="text-white" strokeWidth={2.5} />
         </span>
-        <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Welcome back</h1>
+        <h1 className="font-display text-xl font-semibold text-slate-900 tracking-tight">Welcome back</h1>
         <p className="text-sm text-slate-500 mt-1">Log in to Volt Grid</p>
       </div>
       <Card className="p-6">

@@ -20,6 +20,7 @@ import {
   Input,
   PageHeader,
   Select,
+  SectionHeading,
   Skeleton,
   StarRating,
 } from "@/components/ui";
@@ -252,6 +253,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
         </Card>
       )}
 
+      <SectionHeading icon={Plug} title="Chargers & connectors" />
       <div className="space-y-4">
         {station.chargers.map((charger) => (
           <Card key={charger.id} className="p-4">

@@ -41,7 +41,7 @@ export default function Nav() {
     <>
       <nav className="border-b border-slate-200/80 bg-white/90 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-1.5 font-semibold text-slate-900 whitespace-nowrap">
+          <Link href="/" className="flex items-center gap-1.5 font-display font-semibold text-slate-900 whitespace-nowrap">
             <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm shadow-orange-500/30">
               <Zap size={15} className="text-white" fill="white" strokeWidth={0} />
             </span>

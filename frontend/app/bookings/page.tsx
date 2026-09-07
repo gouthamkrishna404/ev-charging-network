@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Calendar, Clock, History, Plug, Receipt, Square, X, Zap } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, History, Plug, Receipt, Square, X, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Booking, Session } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, IconTile, PageHeader, SectionHeading, Skeleton, Stat } from "@/components/ui";
+import { Bill, Booking, Session } from "@/lib/types";
+import { Badge, Button, Card, EmptyState, IconTile, PageHeader, SectionHeading, Sheet, Skeleton, Stat } from "@/components/ui";
 import LiveEnergyEstimate from "@/components/LiveEnergyEstimate";
 import RequireAuth from "@/components/RequireAuth";
 
@@ -32,6 +32,7 @@ function relativeDay(iso: string) {
 function BookingsContent() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [sessions, setSessions] = useState<Session[] | null>(null);
+  const [completedBill, setCompletedBill] = useState<Bill | null>(null);
 
   async function load() {
     const [b, s] = await Promise.all([
@@ -76,8 +77,8 @@ function BookingsContent() {
 
   async function endSession(sessionId: number) {
     try {
-      await apiFetch(`/sessions/${sessionId}/end`, { method: "POST" });
-      toast.success("Session ended. Bill generated — check My Bills.");
+      const bill = await apiFetch<Bill>(`/sessions/${sessionId}/end`, { method: "POST" });
+      setCompletedBill(bill);
       await load();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Something went wrong");
@@ -119,27 +120,74 @@ function BookingsContent() {
       )}
 
       {activeSession && (
-        <Card className="p-5 border-indigo-200 ring-1 ring-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white animate-fade-in-up">
-          <div className="flex items-start gap-4">
-            <IconTile icon={Zap} tone="indigo" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold text-slate-900">{activeSession.station_name}</p>
-                <Badge status={activeSession.session_status} />
-              </div>
-              <p className="text-sm text-slate-500 mt-0.5">
-                {activeSession.connector_type_name} · started {relativeDay(activeSession.start_time)}
-              </p>
-              <div className="mt-3 space-y-3">
-                <LiveEnergyEstimate startTime={activeSession.start_time} powerKw={Number(activeSession.connector_power_kw)} />
-                <Button onClick={() => endSession(activeSession.id)}>
-                  <Square size={12} fill="currentColor" /> End session
-                </Button>
-              </div>
+        <div className="relative rounded-2xl overflow-hidden bg-slate-950 text-white shadow-xl animate-fade-in-up">
+          <div aria-hidden className="absolute inset-0 bg-mesh-hero" />
+          <div className="relative p-5 sm:p-6">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase text-volt-400 bg-white/5 ring-1 ring-white/10 rounded-full px-2.5 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-volt-400 animate-pulse-ring" />
+                Charging now
+              </span>
+            </div>
+            <p className="font-display text-xl font-semibold mt-2">{activeSession.station_name}</p>
+            <p className="text-sm text-slate-400 mt-0.5">
+              {activeSession.connector_type_name} · started {relativeDay(activeSession.start_time)}
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+              <LiveEnergyEstimate startTime={activeSession.start_time} powerKw={Number(activeSession.connector_power_kw)} />
+              <Button onClick={() => endSession(activeSession.id)} size="lg">
+                <Square size={13} fill="currentColor" /> End session
+              </Button>
             </div>
           </div>
-        </Card>
+        </div>
       )}
+
+      <Sheet open={completedBill !== null} onClose={() => setCompletedBill(null)} title="Session complete">
+        {completedBill && (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center text-center py-2">
+              <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+                <CheckCircle2 size={26} className="text-emerald-600" />
+              </div>
+              <p className="font-display text-2xl font-semibold text-slate-900 tabular-nums">₹{completedBill.total_amount}</p>
+              <p className="text-sm text-slate-500 mt-1">
+                {completedBill.station_name} · {completedBill.connector_type_name}
+              </p>
+            </div>
+            <div className="rounded-xl bg-slate-50 p-4 space-y-1.5 text-sm">
+              <div className="flex justify-between text-slate-600">
+                <span>Energy</span>
+                <span>₹{completedBill.energy_charge}</span>
+              </div>
+              {Number(completedBill.subscription_discount) > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <span>Subscription discount</span>
+                  <span>−₹{completedBill.subscription_discount}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-slate-600">
+                <span>Tax</span>
+                <span>₹{completedBill.tax_amount}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-slate-900 pt-1.5 border-t border-slate-200">
+                <span>Total</span>
+                <span>₹{completedBill.total_amount}</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1 justify-center" onClick={() => setCompletedBill(null)}>
+                Done
+              </Button>
+              <Link href="/bills" className="flex-1">
+                <Button className="w-full justify-center">
+                  <Receipt size={14} /> View bill
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+      </Sheet>
 
       <div>
         <SectionHeading icon={Calendar} title="Upcoming bookings" />

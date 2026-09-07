@@ -190,6 +190,17 @@ def _plate(rng_: random.Random, city: str) -> str:
     return f"{code}{rng_.randint(1, 9):02d}{chr(65 + rng_.randint(0, 25))}{chr(65 + rng_.randint(0, 25))}{rng_.randint(1000, 9999)}"
 
 
+# A flat 6am-10pm draw makes every hour of the day look equally busy, which no real
+# charging network does -- weight toward the two commute windows (dropping the car off
+# on the way to work, topping up on the way home) so usage charts read like a real one.
+_PEAK_HOURS = list(range(6, 23))
+_PEAK_WEIGHTS = [3.0 if (8 <= h <= 10 or 18 <= h <= 20) else 1.5 if 11 <= h <= 17 else 0.7 for h in _PEAK_HOURS]
+
+
+def _peak_hour(rng_: random.Random) -> int:
+    return rng_.choices(_PEAK_HOURS, weights=_PEAK_WEIGHTS)[0]
+
+
 def _add_station(db, operator, location, name, price_per_kwh, hours_profile, charger_keys, admins, connector_types, log_admin, created_at):
     station = ChargingStation(operator_id=operator.id, location_id=location.id, station_name=name, status="active")
     db.add(station)
@@ -456,7 +467,7 @@ def run():
                 user, vehicle = rng.choice(candidates)
                 days_ago = rng.uniform(1, 89)
                 start_time = (now - timedelta(days=days_ago)).replace(
-                    hour=rng.randint(6, 22), minute=rng.choice([0, 15, 30, 45]), second=0, microsecond=0
+                    hour=_peak_hour(rng), minute=rng.choice([0, 15, 30, 45]), second=0, microsecond=0
                 )
                 power = connector.max_power_kw
                 if power >= Decimal("100"):

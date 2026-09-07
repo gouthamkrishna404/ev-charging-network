@@ -3,6 +3,7 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
   --color-volt-50: #f4fce3;
   --color-volt-100: #e3fbb2;
   --color-volt-400: #a3e635;

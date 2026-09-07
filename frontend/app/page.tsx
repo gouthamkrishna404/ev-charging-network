@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   Bell,
@@ -13,13 +14,16 @@ import {
   MapPin,
   Plug,
   ShieldCheck,
+  Star,
   Wrench,
   Zap,
 } from "lucide-react";
 import { isLoggedIn, getRole } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { FeaturedReview, Station } from "@/lib/types";
-import { Badge, Button, Card, IconTile, ProgressRing, StarRating } from "@/components/ui";
+import { Badge, Button, Card, IconTile, StarRating } from "@/components/ui";
+
+const StationsMap = dynamic(() => import("@/components/StationsMap"), { ssr: false });
 
 const STEPS = [
   {
@@ -60,31 +64,54 @@ const OPERATOR_FEATURES = [
 export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [role, setRole] = useState<string | null>(null);
-  const [stats, setStats] = useState<{ stations: number; connectors: number; cities: string[] } | null>(null);
+  const [stations, setStations] = useState<Station[] | null>(null);
   const [reviews, setReviews] = useState<FeaturedReview[]>([]);
+  const [tickerIndex, setTickerIndex] = useState(0);
 
   useEffect(() => {
     setLoggedIn(isLoggedIn());
     setRole(getRole());
-    apiFetch<Station[]>("/stations")
-      .then((stations) => {
-        const connectors = stations.reduce(
-          (sum, s) => sum + s.chargers.reduce((cSum, c) => cSum + c.connectors.length, 0),
-          0
-        );
-        const cities = Array.from(new Set(stations.map((s) => s.location.city))).sort();
-        setStats({ stations: stations.length, connectors, cities });
-      })
-      .catch(() => {});
+    apiFetch<Station[]>("/stations").then(setStations).catch(() => {});
     apiFetch<FeaturedReview[]>("/stations/reviews/featured")
       .then((r) => setReviews(r.slice(0, 6)))
       .catch(() => {});
   }, []);
 
+  const stats = useMemo(() => {
+    if (!stations) return null;
+    const connectors = stations.reduce((sum, s) => sum + s.chargers.reduce((cSum, c) => cSum + c.connectors.length, 0), 0);
+    const available = stations.reduce(
+      (sum, s) => sum + s.chargers.reduce((cSum, c) => cSum + c.connectors.filter((con) => con.status === "available").length, 0),
+      0
+    );
+    const cities = Array.from(new Set(stations.map((s) => s.location.city))).sort();
+    const rated = stations.filter((s) => s.avg_rating !== null);
+    const avgRating = rated.length ? rated.reduce((sum, s) => sum + (s.avg_rating ?? 0), 0) / rated.length : null;
+    const reviewCount = stations.reduce((sum, s) => sum + s.review_count, 0);
+    const operators = new Set(stations.map((s) => s.operator_name)).size;
+    return { stations: stations.length, connectors, available, cities, avgRating, reviewCount, operators };
+  }, [stations]);
+
+  const tickerFacts = useMemo(() => {
+    if (!stats) return [];
+    return [
+      `${stats.available} of ${stats.connectors} connectors free right now`,
+      `${stats.stations} stations across ${stats.cities.length} cities`,
+      stats.avgRating ? `${stats.avgRating.toFixed(1)}★ average station rating` : null,
+      "Two operators, one map, one membership",
+    ].filter((x): x is string => !!x);
+  }, [stats]);
+
+  useEffect(() => {
+    if (tickerFacts.length < 2) return;
+    const interval = setInterval(() => setTickerIndex((i) => (i + 1) % tickerFacts.length), 3200);
+    return () => clearInterval(interval);
+  }, [tickerFacts.length]);
+
   return (
     <div className="space-y-24 pb-12">
       {/* Hero */}
-      <section className="relative -mx-4 sm:-mx-6 px-4 sm:px-6 pt-14 pb-20 overflow-hidden bg-slate-950 text-white -mt-8">
+      <section className="relative -mx-4 sm:-mx-6 px-4 sm:px-6 pt-14 pb-16 overflow-hidden bg-slate-950 text-white -mt-8">
         <div aria-hidden className="absolute inset-0 bg-mesh-hero" />
         <div aria-hidden className="absolute inset-0 bg-dot-grid opacity-40 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_20%,black,transparent)]" />
 
@@ -94,7 +121,7 @@ export default function Home() {
               <span className="w-1.5 h-1.5 rounded-full bg-volt-400 animate-pulse-ring" />
               Live across {stats?.cities.length ?? "7+"} cities
             </p>
-            <h1 className="text-4xl sm:text-6xl font-semibold tracking-tight leading-[1.1]">
+            <h1 className="font-display text-4xl sm:text-6xl font-semibold tracking-tight leading-[1.1]">
               Charging, mapped{" "}
               <span className="bg-gradient-to-r from-volt-400 via-emerald-300 to-indigo-300 bg-clip-text text-transparent">
                 the way it should be.
@@ -115,11 +142,7 @@ export default function Home() {
                     <Button size="lg">Get started — it&apos;s free</Button>
                   </Link>
                   <Link href="/stations">
-                    <Button
-                      size="lg"
-                      variant="secondary"
-                      className="bg-white/5! border-white/15! text-white! hover:bg-white/10!"
-                    >
+                    <Button size="lg" variant="secondary" className="bg-white/5! border-white/15! text-white! hover:bg-white/10!">
                       See the network
                     </Button>
                   </Link>
@@ -145,65 +168,40 @@ export default function Home() {
             )}
           </div>
 
-          {/* Decorative floating preview stack -- not real live data, just an
-              illustration of the product so the hero doesn't lean on stock imagery. */}
-          <div className="relative hidden lg:block h-[420px]" aria-hidden>
-            <div className="absolute right-4 top-2 w-72 rotate-3 animate-fade-in-up" style={{ animationDelay: "80ms" }}>
-              <Card className="p-4 bg-white/95 backdrop-blur">
-                <div className="flex items-center gap-2.5">
-                  <IconTile icon={Zap} tone="indigo" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">Volt Grid · Indiranagar</p>
-                    <p className="text-xs text-slate-400">0.6 km away</p>
-                  </div>
-                  <Badge status="available" />
-                </div>
-                <div className="mt-3 flex gap-1.5">
-                  <span className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">CCS2</span>
-                  <span className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">Type 2</span>
-                </div>
-                <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="h-full w-3/4 rounded-full bg-emerald-500" />
-                </div>
-              </Card>
+          {/* The real network map, not a mockup -- the map is the product's standout
+              feature, so the first thing a visitor sees is the actual thing, live. */}
+          <div className="relative">
+            <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 h-[220px] lg:h-[420px] bg-slate-900">
+              {stations && stations.length > 0 && (
+                <StationsMap stations={stations} interactive={false} height="100%" />
+              )}
             </div>
-            <div className="absolute left-0 bottom-4 w-64 -rotate-2 animate-fade-in-up" style={{ animationDelay: "220ms" }}>
-              <Card className="p-4 bg-white/95 backdrop-blur">
-                <p className="text-xs font-medium text-slate-500 mb-3">Charging now</p>
-                <div className="flex items-center gap-4">
-                  <ProgressRing progress={0.62} size={72} strokeWidth={6}>
-                    <span className="text-sm font-semibold text-slate-900 tabular-nums">62%</span>
-                  </ProgressRing>
-                  <div>
-                    <p className="text-lg font-semibold text-slate-900 tabular-nums">31.4 kWh</p>
-                    <p className="text-xs text-slate-500">~18 min remaining</p>
-                  </div>
-                </div>
-              </Card>
+            <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-white/95 backdrop-blur rounded-full pl-2.5 pr-3 py-1.5 shadow-lg">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-ring" />
+              <span className="text-xs font-semibold text-slate-700">{stats ? `${stats.available} available now` : "Loading…"}</span>
             </div>
-            <div className="absolute right-10 bottom-0 flex items-center gap-1.5 bg-white/95 backdrop-blur rounded-full px-3.5 py-2 shadow-lg animate-fade-in-up" style={{ animationDelay: "340ms" }}>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-ring" />
-              <span className="text-xs font-medium text-slate-700">
-                {stats ? `${stats.connectors} connectors online` : "Connectors online"}
-              </span>
-            </div>
+            {stats?.avgRating && (
+              <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-white/95 backdrop-blur rounded-full px-3 py-1.5 shadow-lg">
+                <Star size={12} className="text-amber-500" fill="currentColor" />
+                <span className="text-xs font-semibold text-slate-700">{stats.avgRating.toFixed(1)} avg rating</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {stats && stats.cities.length > 0 && (
-          <div className="relative max-w-6xl mx-auto mt-14 flex flex-wrap gap-2 border-t border-white/10 pt-6">
-            {stats.cities.map((city) => (
-              <span key={city} className="text-xs font-medium text-slate-300 bg-white/5 ring-1 ring-white/10 rounded-full px-3 py-1">
-                {city}
-              </span>
-            ))}
+        {tickerFacts.length > 0 && (
+          <div className="relative max-w-6xl mx-auto mt-10 border-t border-white/10 pt-5 flex items-center gap-2.5 text-sm text-slate-300">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-volt-400 shrink-0">Right now</span>
+            <span key={tickerIndex} className="animate-fade-in truncate">
+              {tickerFacts[tickerIndex]}
+            </span>
           </div>
         )}
       </section>
 
       {/* How it works */}
       <section>
-        <h2 className="text-xl font-semibold text-slate-900 tracking-tight text-center mb-10">How it works</h2>
+        <h2 className="font-display text-2xl font-semibold text-slate-900 tracking-tight text-center mb-10">How it works</h2>
         <div className="relative grid grid-cols-1 gap-6 sm:grid-cols-3">
           <div aria-hidden className="hidden sm:block absolute top-[26px] left-[16.5%] right-[16.5%] h-px bg-slate-200" />
           {STEPS.map((step, i) => (
@@ -220,16 +218,16 @@ export default function Home() {
       </section>
 
       {/* Feature columns */}
-      <section className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <Card className="p-6">
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="p-6 flex flex-col">
           <div className="flex items-center gap-3 mb-4">
             <IconTile icon={Car} tone="indigo" />
             <div>
-              <p className="font-semibold text-slate-900">For drivers</p>
+              <p className="font-display font-semibold text-slate-900">For drivers</p>
               <p className="text-sm text-slate-500">Everything you need to charge without friction.</p>
             </div>
           </div>
-          <ul className="space-y-3 text-sm text-slate-600">
+          <ul className="space-y-3 text-sm text-slate-600 flex-1">
             {DRIVER_FEATURES.map((f) => (
               <li key={f.text} className="flex gap-2.5 items-start">
                 <f.icon size={16} className="text-indigo-500 mt-0.5 shrink-0" strokeWidth={2} />
@@ -237,16 +235,33 @@ export default function Home() {
               </li>
             ))}
           </ul>
+          {/* A real station-card preview, styled exactly like the one on /stations --
+              proof of what the product actually looks like, not an illustration of it. */}
+          <div className="mt-5 rounded-xl border border-slate-200 p-3.5 bg-slate-50/60">
+            <div className="flex items-start gap-3">
+              <IconTile icon={Zap} tone="indigo" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 truncate">Volt Grid - Indiranagar</p>
+                <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                  <MapPin size={11} className="shrink-0" /> 100 Feet Road, Bengaluru
+                </p>
+              </div>
+              <Badge status="available" />
+            </div>
+            <div className="mt-2.5 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-full w-3/4 rounded-full bg-emerald-500" />
+            </div>
+          </div>
         </Card>
-        <Card className="p-6">
+        <Card className="p-6 flex flex-col">
           <div className="flex items-center gap-3 mb-4">
             <IconTile icon={Building2} tone="amber" />
             <div>
-              <p className="font-semibold text-slate-900">For station operators</p>
+              <p className="font-display font-semibold text-slate-900">For station operators</p>
               <p className="text-sm text-slate-500">Run your network from one dashboard.</p>
             </div>
           </div>
-          <ul className="space-y-3 text-sm text-slate-600">
+          <ul className="space-y-3 text-sm text-slate-600 flex-1">
             {OPERATOR_FEATURES.map((f) => (
               <li key={f.text} className="flex gap-2.5 items-start">
                 <f.icon size={16} className="text-amber-500 mt-0.5 shrink-0" strokeWidth={2} />
@@ -254,13 +269,23 @@ export default function Home() {
               </li>
             ))}
           </ul>
+          <div className="mt-5 rounded-xl border border-slate-200 p-3.5 bg-slate-50/60 flex gap-6">
+            <div>
+              <p className="text-lg font-semibold text-slate-900 tabular-nums">{stats?.operators ?? "—"}</p>
+              <p className="text-xs text-slate-500">operators on the network</p>
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-slate-900 tabular-nums">{stats?.reviewCount ?? "—"}</p>
+              <p className="text-xs text-slate-500">driver reviews</p>
+            </div>
+          </div>
         </Card>
       </section>
 
       {/* Testimonials */}
       {reviews.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold text-slate-900 tracking-tight text-center mb-8">What drivers are saying</h2>
+          <h2 className="font-display text-2xl font-semibold text-slate-900 tracking-tight text-center mb-8">What drivers are saying</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {reviews.map((r) => (
               <Card key={r.id} className="p-5">
@@ -283,7 +308,7 @@ export default function Home() {
               <ShieldCheck size={22} className="text-emerald-400" strokeWidth={2} />
             </div>
             <div>
-              <p className="font-semibold text-base">Built so two drivers can never double-book the same connector</p>
+              <p className="font-display font-semibold text-base">Built so two drivers can never double-book the same connector</p>
               <p className="text-sm text-slate-300 mt-1.5 max-w-2xl leading-relaxed">
                 Booking conflicts are rejected by a database-level constraint, not just application code —
                 so it holds up correctly even under concurrent requests, not just in the happy path.
@@ -298,7 +323,7 @@ export default function Home() {
         <section className="relative -mx-4 sm:-mx-6 px-4 sm:px-6 py-14 overflow-hidden bg-slate-950 text-white text-center">
           <div aria-hidden className="absolute inset-0 bg-mesh-hero" />
           <div className="relative">
-            <p className="text-2xl font-semibold tracking-tight">Ready to find your next charge?</p>
+            <p className="font-display text-2xl font-semibold tracking-tight">Ready to find your next charge?</p>
             <p className="text-slate-400 mt-2">Free to join, no card required to browse the network.</p>
             <div className="mt-6 flex justify-center gap-3">
               <Link href="/register">
