@@ -25,11 +25,13 @@ body {
 
 /* The app's canvas, dark by default everywhere -- not just a hero section.
    A near-black indigo-tinted base with the same indigo/violet/volt hues used
-   throughout the product washed faintly into the corners, fixed to the
-   viewport so it reads as one continuous surface behind every page rather
-   than a color that resets at each section -- including the margins beside a
-   centered content column on wide screens, which is exactly where a
-   dark-hero-in-a-light-page used to seam visibly. */
+   throughout the product washed faintly into the corners so it reads as one
+   continuous surface behind every page rather than a color that resets at
+   each section -- including the margins beside a centered content column on
+   wide screens, which is exactly where a dark-hero-in-a-light-page used to
+   seam visibly. Scrolls with the page (not attachment: fixed) -- pinning the
+   glow to the viewport made it read as a static watermark sitting on top of
+   the content rather than part of the page itself. */
 .bg-canvas {
   background-color: #08070e;
   background-image:
@@ -37,7 +39,6 @@ body {
     radial-gradient(1000px 620px at 110% -10%, color-mix(in srgb, var(--color-volt-500) 14%, transparent), transparent 60%),
     radial-gradient(1100px 700px at 105% 105%, color-mix(in srgb, var(--color-indigo-600) 18%, transparent), transparent 55%),
     radial-gradient(900px 600px at -10% 105%, color-mix(in srgb, var(--color-violet-500) 12%, transparent), transparent 55%);
-  background-attachment: fixed;
   background-repeat: no-repeat;
 }
 
@@ -150,18 +151,28 @@ body {
   animation: shimmer 1.8s ease-in-out infinite;
 }
 
-/* Decorative radial mesh used behind premium/hero surfaces. Kept as a utility
-   class (rather than inline styles) so the gradient stops stay consistent
-   everywhere it's reused. Masked to fade out before it reaches the box edge --
-   on a short section (e.g. the final CTA band) the gradient's own falloff
-   hasn't reached transparent by the time `overflow-hidden` clips it, which
-   reads as a hard rectangular seam against the canvas around it. Fixed-pixel
-   (not percentage) stops so the fade band is the same size regardless of how
-   tall or wide the section using it is. */
+/* Decorative radial mesh used behind the tall marketing hero. Kept as a
+   utility class (rather than inline styles) so the gradient stops stay
+   consistent everywhere it's reused. Sized for a tall box -- both blobs have
+   room to fade out well before the section's own edges. */
 .bg-mesh-hero {
   background-image:
     radial-gradient(ellipse 60% 50% at 20% 0%, color-mix(in srgb, var(--color-indigo-500) 35%, transparent), transparent),
     radial-gradient(ellipse 50% 40% at 90% 20%, color-mix(in srgb, var(--color-volt-500) 25%, transparent), transparent);
+}
+
+/* Compact ambient glow for short full-bleed bands (the closing CTA). Reusing
+   bg-mesh-hero here read badly: cropped to a short box, its two
+   corner-anchored blobs (indigo vs. the far-off-hue volt green) no longer had
+   room to blend into each other, so they showed up as two flat, disconnected
+   color bands with a dark gap between -- not a wash. One overlapping pair of
+   soft blobs from the same indigo/violet family instead, with a fixed-pixel
+   (not percentage) vertical mask so the fade band is the same size regardless
+   of the section's height and never gets clipped hard by overflow-hidden. */
+.bg-mesh-glow {
+  background-image:
+    radial-gradient(ellipse 50% 100% at 40% 50%, color-mix(in srgb, var(--color-indigo-500) 24%, transparent), transparent 75%),
+    radial-gradient(ellipse 50% 100% at 62% 50%, color-mix(in srgb, var(--color-violet-500) 16%, transparent), transparent 75%);
   mask-image: linear-gradient(to bottom, transparent 0, black 48px, black calc(100% - 48px), transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 48px, black calc(100% - 48px), transparent 100%);
 }
@@ -183,11 +194,14 @@ body {
 }
 
 /* Leaflet popups restyled to match the app's dark card language instead of
-   the library's boxy, light-only default chrome. */
+   the library's boxy, light-only default chrome. !important on background/
+   color because leaflet's own stylesheet (imported inside the dynamically-
+   loaded map component) can end up in a later CSS chunk than this file,
+   which would otherwise let its white default win the tie on specificity. */
 .leaflet-popup-content-wrapper {
   border-radius: 14px;
-  background: #100f1c;
-  color: #e2e8f0;
+  background: #100f1c !important;
+  color: #e2e8f0 !important;
   box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(129, 140, 248, 0.12);
   padding: 0;
 }
@@ -196,7 +210,7 @@ body {
   width: auto !important;
 }
 .leaflet-popup-tip {
-  background: #100f1c;
+  background: #100f1c !important;
   box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.4);
 }
 .leaflet-popup-close-button {

@@ -321,7 +321,7 @@ export default function Home() {
       {/* Final CTA */}
       {!loggedIn && (
         <section className="full-bleed relative px-4 sm:px-6 py-14 overflow-hidden text-white text-center">
-          <div aria-hidden className="absolute inset-0 bg-mesh-hero" />
+          <div aria-hidden className="absolute inset-0 bg-mesh-glow" />
           <div className="relative">
             <p className="font-display text-2xl font-semibold tracking-tight">Ready to find your next charge?</p>
             <p className="text-slate-400 mt-2">Free to join, no card required to browse the network.</p>

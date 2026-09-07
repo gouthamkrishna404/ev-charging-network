@@ -319,7 +319,7 @@ export default function StationsMap({
       touchZoom={interactive}
       attributionControl={interactive}
       style={{ height, width: "100%" }}
-      className="rounded-2xl overflow-hidden"
+      className="rounded-2xl overflow-hidden isolate"
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

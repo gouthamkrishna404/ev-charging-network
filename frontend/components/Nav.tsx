@@ -17,12 +17,23 @@ export default function Nav() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [role, setRole] = useState<string | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     setLoggedIn(isLoggedIn());
     setRole(getRole());
     setAccountOpen(false);
   }, [pathname]);
+
+  // At the very top of the page the nav should read as part of the canvas
+  // behind it, not a bar sitting on top -- only pick up a surface of its own
+  // once there's scrolled content it needs to stay legible over.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   function handleLogout() {
     clearSession();
@@ -40,7 +51,11 @@ export default function Nav() {
 
   return (
     <>
-      <nav className="relative border-b border-white/[0.08] bg-white/[0.03] backdrop-blur-xl sticky top-0 z-20">
+      <nav
+        className={`relative sticky top-0 z-20 transition-colors duration-300 ${
+          scrolled ? "border-b border-white/[0.08] bg-white/[0.03] backdrop-blur-xl" : "border-b border-transparent"
+        }`}
+      >
         <div
           aria-hidden
           className="absolute inset-0 bg-gradient-to-r from-indigo-500/[0.07] via-transparent to-volt-500/[0.06] pointer-events-none"
