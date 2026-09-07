@@ -58,3 +58,15 @@ export interface AdminRefund {
   refund_date: string;
   status: string;
 }
+
+export interface AnalyticsOverview {
+  kpis: {
+    total_revenue: number;
+    total_sessions: number;
+    active_stations: number;
+    avg_rating: number | null;
+  };
+  daily: { date: string; revenue: number; sessions: number }[];
+  by_station: { station_id: number; station_name: string; revenue: number; sessions: number }[];
+  by_connector_type: { type_name: string; sessions: number }[];
+}

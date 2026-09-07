@@ -17,8 +17,8 @@ import {
 } from "lucide-react";
 import { isLoggedIn, getRole } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import { Station } from "@/lib/types";
-import { Button, Card, IconTile, Stat } from "@/components/ui";
+import { FeaturedReview, Station } from "@/lib/types";
+import { Button, Card, IconTile, Stat, StarRating } from "@/components/ui";
 
 const STEPS = [
   {
@@ -59,7 +59,8 @@ const OPERATOR_FEATURES = [
 export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [role, setRole] = useState<string | null>(null);
-  const [stats, setStats] = useState<{ stations: number; connectors: number; cities: number } | null>(null);
+  const [stats, setStats] = useState<{ stations: number; connectors: number; cities: string[] } | null>(null);
+  const [reviews, setReviews] = useState<FeaturedReview[]>([]);
 
   useEffect(() => {
     setLoggedIn(isLoggedIn());
@@ -70,9 +71,12 @@ export default function Home() {
           (sum, s) => sum + s.chargers.reduce((cSum, c) => cSum + c.connectors.length, 0),
           0
         );
-        const cities = new Set(stations.map((s) => s.location.city)).size;
+        const cities = Array.from(new Set(stations.map((s) => s.location.city))).sort();
         setStats({ stations: stations.length, connectors, cities });
       })
+      .catch(() => {});
+    apiFetch<FeaturedReview[]>("/stations/reviews/featured")
+      .then((r) => setReviews(r.slice(0, 6)))
       .catch(() => {});
   }, []);
 
@@ -125,7 +129,17 @@ export default function Home() {
           <div className="mt-12 flex justify-center gap-10">
             <Stat value={stats.stations} label="stations live" />
             <Stat value={stats.connectors} label="connectors" />
-            <Stat value={stats.cities} label={stats.cities === 1 ? "city" : "cities"} />
+            <Stat value={stats.cities.length} label={stats.cities.length === 1 ? "city" : "cities"} />
+          </div>
+        )}
+
+        {stats && stats.cities.length > 0 && (
+          <div className="mt-6 flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
+            {stats.cities.map((city) => (
+              <span key={city} className="text-xs font-medium text-slate-500 bg-white border border-slate-200 rounded-full px-3 py-1">
+                {city}
+              </span>
+            ))}
           </div>
         )}
       </section>
@@ -133,7 +147,7 @@ export default function Home() {
       {/* How it works */}
       <section>
         <h2 className="text-xl font-semibold text-slate-900 tracking-tight text-center mb-8">How it works</h2>
-        <div className="grid gap-6 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           {STEPS.map((step, i) => (
             <Card key={step.title} className="p-5 relative" interactive>
               <span className="absolute -top-3 -left-3 w-7 h-7 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center ring-4 ring-slate-50">
@@ -148,7 +162,7 @@ export default function Home() {
       </section>
 
       {/* Feature columns */}
-      <section className="grid gap-6 sm:grid-cols-2">
+      <section className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <IconTile icon={Car} tone="indigo" />
@@ -184,6 +198,24 @@ export default function Home() {
           </ul>
         </Card>
       </section>
+
+      {/* Testimonials */}
+      {reviews.length > 0 && (
+        <section>
+          <h2 className="text-xl font-semibold text-slate-900 tracking-tight text-center mb-8">What drivers are saying</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {reviews.map((r) => (
+              <Card key={r.id} className="p-5">
+                <StarRating rating={r.rating} />
+                <p className="text-sm text-slate-600 mt-2.5 leading-relaxed">&ldquo;{r.comment}&rdquo;</p>
+                <p className="text-xs text-slate-400 mt-3">
+                  {r.reviewer_name} · {r.station_name}, {r.city}
+                </p>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Trust / reliability */}
       <section>

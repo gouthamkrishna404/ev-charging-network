@@ -139,10 +139,14 @@ class StationOut(BaseModel):
     id: int
     station_name: str
     status: str
+    operator_id: int
+    operator_name: str
     location: LocationOut
     chargers: list[ChargerOut] = []
     tariff: TariffOut | None = None
     operating_hours: list[OperatingHoursOut] = []
+    avg_rating: float | None = None
+    review_count: int = 0
 
 
 # ---------- Admin: station/infrastructure management ----------
@@ -332,6 +336,15 @@ class ReviewOut(BaseModel):
     comment: str | None
     review_date: datetime
     is_verified: bool
+
+
+class FeaturedReviewOut(BaseModel):
+    id: int
+    rating: int
+    comment: str | None
+    station_name: str
+    city: str
+    reviewer_name: str
 
 
 # ---------- Maintenance & technicians ----------

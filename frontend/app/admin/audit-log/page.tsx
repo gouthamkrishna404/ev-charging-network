@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { History, Pencil, Plus, ShieldCheck, ShieldX, UserMinus, UserPlus, type LucideIcon } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
+import { apiFetch, ApiError } from "@/lib/api";
 import { AuditLogEntry } from "@/lib/admin-types";
-import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { Card, EmptyState, PageHeader, Skeleton } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 const ACTION_ICONS: Record<string, LucideIcon> = {
@@ -25,15 +26,24 @@ export default function AuditLogPage() {
 }
 
 function AuditLogContent() {
-  const [entries, setEntries] = useState<AuditLogEntry[]>([]);
+  const [entries, setEntries] = useState<AuditLogEntry[] | null>(null);
 
   useEffect(() => {
-    apiFetch<AuditLogEntry[]>("/admin/audit-log").then(setEntries);
+    apiFetch<AuditLogEntry[]>("/admin/audit-log")
+      .then(setEntries)
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : "Failed to load audit log"));
   }, []);
 
   return (
     <div>
       <PageHeader title="Audit Log" subtitle="Recent admin actions across your operator's stations." />
+      {entries === null ? (
+        <div className="space-y-2">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-12" />
+          ))}
+        </div>
+      ) : (
       <Card>
         <ul className="divide-y divide-slate-100">
           {entries.map((e) => {
@@ -57,6 +67,7 @@ function AuditLogContent() {
         </ul>
         {entries.length === 0 && <EmptyState icon={History}>No activity yet.</EmptyState>}
       </Card>
+      )}
     </div>
   );
 }

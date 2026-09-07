@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Calendar, Plug, Square, X, Zap } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Booking, Session } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, IconTile, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, IconTile, PageHeader, Skeleton } from "@/components/ui";
 import LiveEnergyEstimate from "@/components/LiveEnergyEstimate";
 import RequireAuth from "@/components/RequireAuth";
 
@@ -18,9 +19,8 @@ export default function BookingsPage() {
 }
 
 function BookingsContent() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [sessions, setSessions] = useState<Session[] | null>(null);
 
   async function load() {
     const [b, s] = await Promise.all([
@@ -32,22 +32,21 @@ function BookingsContent() {
   }
 
   useEffect(() => {
-    load();
+    load().catch((err) => toast.error(err instanceof ApiError ? err.message : "Failed to load your bookings"));
   }, []);
 
   async function cancelBooking(id: number) {
     if (!confirm("Cancel this booking?")) return;
-    setMessage(null);
     try {
       await apiFetch(`/bookings/${id}/cancel`, { method: "POST" });
+      toast.success("Booking cancelled.");
       await load();
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function startSession(booking: Booking) {
-    setMessage(null);
     try {
       await apiFetch("/sessions/start", {
         method: "POST",
@@ -57,34 +56,34 @@ function BookingsContent() {
           booking_id: booking.id,
         }),
       });
+      toast.success("Session started — plug in and charge.");
       await load();
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function endSession(sessionId: number) {
-    setMessage(null);
     try {
       await apiFetch(`/sessions/${sessionId}/end`, { method: "POST" });
-      setMessage({ type: "success", text: "Session ended. Bill generated — check My Bills." });
+      toast.success("Session ended. Bill generated — check My Bills.");
       await load();
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   return (
     <div className="space-y-8">
-      {message && <Alert type={message.type}>{message.text}</Alert>}
-
       <div>
         <PageHeader
           title="My Sessions"
           subtitle="A session is created the moment you plug in — whether it came from a booking or a walk-in start. Energy delivered is read from the connector automatically, just like a real charger."
         />
         <ul className="space-y-3">
-          {sessions.map((s) => (
+          {sessions === null &&
+            [...Array(2)].map((_, i) => <Skeleton key={i} className="h-[72px]" />)}
+          {sessions?.map((s) => (
             <Card key={s.id} className="p-4">
               <div className="flex items-center gap-3">
                 <IconTile icon={Zap} tone={s.session_status === "charging" ? "indigo" : "slate"} />
@@ -109,7 +108,7 @@ function BookingsContent() {
               )}
             </Card>
           ))}
-          {sessions.length === 0 && (
+          {sessions?.length === 0 && (
             <EmptyState icon={Zap}>
               No sessions yet —{" "}
               <Link href="/stations" className="underline">
@@ -127,7 +126,9 @@ function BookingsContent() {
           subtitle="Reservations you've made in advance. Cancel any time before you start charging."
         />
         <ul className="space-y-3">
-          {bookings.map((b) => (
+          {bookings === null &&
+            [...Array(2)].map((_, i) => <Skeleton key={i} className="h-[72px]" />)}
+          {bookings?.map((b) => (
             <Card key={b.id} className="p-4">
               <div className="flex items-center gap-3">
                 <IconTile icon={Calendar} tone={b.status === "confirmed" ? "indigo" : "slate"} />
@@ -151,7 +152,7 @@ function BookingsContent() {
               )}
             </Card>
           ))}
-          {bookings.length === 0 && (
+          {bookings?.length === 0 && (
             <EmptyState icon={Calendar}>No upcoming bookings — walk-in sessions won&apos;t show up here.</EmptyState>
           )}
         </ul>

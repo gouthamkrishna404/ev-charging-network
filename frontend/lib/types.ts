@@ -54,10 +54,14 @@ export interface Station {
   id: number;
   station_name: string;
   status: string;
+  operator_id: number;
+  operator_name: string;
   location: Location;
   chargers: ChargerInfo[];
   tariff: { price_per_kwh: string } | null;
   operating_hours: OperatingHours[];
+  avg_rating: number | null;
+  review_count: number;
 }
 
 export interface Booking {
@@ -151,6 +155,15 @@ export interface Review {
   comment: string | null;
   review_date: string;
   is_verified: boolean;
+}
+
+export interface FeaturedReview {
+  id: number;
+  rating: number;
+  comment: string | null;
+  station_name: string;
+  city: string;
+  reviewer_name: string;
 }
 
 export interface MeterReading {

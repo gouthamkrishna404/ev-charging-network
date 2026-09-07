@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { UserCog, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
 import { TeamAdmin } from "@/lib/admin-types";
-import { Alert, Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select, Skeleton } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function TeamPage() {
@@ -17,12 +18,11 @@ export default function TeamPage() {
 }
 
 function TeamContent() {
-  const [team, setTeam] = useState<TeamAdmin[]>([]);
+  const [team, setTeam] = useState<TeamAdmin[] | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("station_manager");
-  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [canManage, setCanManage] = useState(false);
 
   async function load() {
@@ -31,12 +31,11 @@ function TeamContent() {
 
   useEffect(() => {
     setCanManage(isSuperAdmin());
-    load();
+    load().catch((err) => toast.error(err instanceof ApiError ? err.message : "Failed to load team"));
   }, []);
 
   async function addMember(e: React.FormEvent) {
     e.preventDefault();
-    setMessage(null);
     try {
       await apiFetch("/admin/team", {
         method: "POST",
@@ -45,10 +44,10 @@ function TeamContent() {
       setName("");
       setEmail("");
       setPassword("");
-      setMessage({ type: "success", text: "Team member added." });
+      toast.success("Team member added.");
       await load();
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
@@ -58,25 +57,25 @@ function TeamContent() {
         title="Team"
         subtitle="Everyone with an admin login under your operator. Assign them to specific stations from My Stations."
       />
-      {message && <Alert type={message.type}>{message.text}</Alert>}
 
       <ul className="space-y-2">
-        {team.map((member) => (
-          <Card key={member.id} className="p-3 flex items-center justify-between text-sm">
-            <span className="flex items-center gap-3">
+        {team === null && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-[60px]" />)}
+        {team?.map((member) => (
+          <Card key={member.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span className="flex items-center gap-3 min-w-0">
               <IconTile icon={UserCog} tone={member.role === "super_admin" ? "amber" : "indigo"} />
-              <span>
-                <span className="font-medium block">{member.name}</span>
-                <span className="text-slate-500">{member.email}</span>
+              <span className="min-w-0">
+                <span className="font-medium block truncate">{member.name}</span>
+                <span className="text-slate-500 block truncate">{member.email}</span>
               </span>
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <Badge status={member.role} />
               <Badge status={member.status} />
             </div>
           </Card>
         ))}
-        {team.length === 0 && <EmptyState icon={UserCog}>No team members yet.</EmptyState>}
+        {team?.length === 0 && <EmptyState icon={UserCog}>No team members yet.</EmptyState>}
       </ul>
 
       {canManage ? (

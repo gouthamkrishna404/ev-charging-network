@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Car, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Vehicle, VehicleModel } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select, Skeleton } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function VehiclesPage() {
@@ -16,11 +17,10 @@ export default function VehiclesPage() {
 }
 
 function VehiclesContent() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [models, setModels] = useState<VehicleModel[]>([]);
   const [modelId, setModelId] = useState<number | "">("");
   const [registration, setRegistration] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   async function load() {
     const [v, m] = await Promise.all([
@@ -29,11 +29,11 @@ function VehiclesContent() {
     ]);
     setVehicles(v);
     setModels(m);
-    if (m.length > 0) setModelId(m[0].id);
+    if (m.length > 0) setModelId((current) => (current === "" ? m[0].id : current));
   }
 
   useEffect(() => {
-    load();
+    load().catch((err) => toast.error(err instanceof ApiError ? err.message : "Failed to load vehicles"));
   }, []);
 
   function modelLabel(id: number) {
@@ -43,7 +43,6 @@ function VehiclesContent() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     if (modelId === "") return;
     try {
       await apiFetch("/users/me/vehicles", {
@@ -51,20 +50,21 @@ function VehiclesContent() {
         body: JSON.stringify({ model_id: modelId, registration_number: registration }),
       });
       setRegistration("");
+      toast.success("Vehicle added.");
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong");
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function toggleActive(vehicle: Vehicle) {
-    setError(null);
     const action = vehicle.vehicle_status === "active" ? "deactivate" : "reactivate";
     try {
       await apiFetch(`/users/me/vehicles/${vehicle.id}/${action}`, { method: "POST" });
+      toast.success(action === "deactivate" ? "Vehicle deactivated." : "Vehicle reactivated.");
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong");
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
@@ -76,7 +76,8 @@ function VehiclesContent() {
       />
 
       <ul className="space-y-2">
-        {vehicles.map((v) => (
+        {vehicles === null && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-[60px]" />)}
+        {vehicles?.map((v) => (
           <Card key={v.id} className="p-3 flex items-center justify-between text-sm">
             <span className="flex items-center gap-3">
               <IconTile icon={Car} tone={v.vehicle_status === "active" ? "indigo" : "slate"} />
@@ -93,7 +94,7 @@ function VehiclesContent() {
             </div>
           </Card>
         ))}
-        {vehicles.length === 0 && (
+        {vehicles?.length === 0 && (
           <EmptyState icon={Car}>No vehicles yet — add one below, then head to Stations to book or start charging.</EmptyState>
         )}
       </ul>
@@ -118,7 +119,6 @@ function VehiclesContent() {
               required
             />
           </Field>
-          {error && <Alert type="error">{error}</Alert>}
           <Button type="submit" className="w-full justify-center">
             <Plus size={15} /> Add vehicle
           </Button>

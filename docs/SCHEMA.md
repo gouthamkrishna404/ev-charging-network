@@ -125,3 +125,18 @@ naming fixes applied throughout):
   known relational modeling challenge (a payment is polymorphic over what it
   pays for) solved here with nullable FKs plus a `CHECK`, rather than a
   separate `payment_line_items` table, which would be overkill for two cases.
+
+## Performance
+
+- A later migration (`f1a2b3c4d5e6`) adds indexes on the columns the admin
+  analytics dashboard and public station search actually filter/sort/group
+  by: `bills.generated_date`, `charging_sessions.start_time` and
+  `.connector_id`, `bookings.start_time`, `locations.city`, and
+  `charging_stations.operator_id`. These weren't needed for the MVP's single
+  operator and single historical session, but matter once the dataset is
+  13 stations and hundreds of sessions deep.
+- `ChargingStation.avg_rating` / `.review_count` are computed in Python from
+  an eager-loaded `reviews` relationship rather than a SQL `AVG()`/`COUNT()`
+  subquery, since the station list/detail queries already eager-load reviews
+  for other reasons — adding a second aggregate query per request would be
+  pure overhead for the same data.

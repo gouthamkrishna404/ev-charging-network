@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Building2, Check, X, Zap } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { ChargingPlan, Subscription } from "@/lib/types";
-import { Alert, Badge, Button, Card, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, PageHeader, Skeleton } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function PlansPage() {
@@ -16,9 +17,8 @@ export default function PlansPage() {
 }
 
 function PlansContent() {
-  const [plans, setPlans] = useState<ChargingPlan[]>([]);
+  const [plans, setPlans] = useState<ChargingPlan[] | null>(null);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   async function load() {
     const [p, s] = await Promise.all([
@@ -30,11 +30,11 @@ function PlansContent() {
   }
 
   useEffect(() => {
-    load();
+    load().catch((err) => toast.error(err instanceof ApiError ? err.message : "Failed to load plans"));
   }, []);
 
   function planFor(sub: Subscription) {
-    return plans.find((p) => p.id === sub.plan_id);
+    return (plans ?? []).find((p) => p.id === sub.plan_id);
   }
 
   function activeSubscriptionFor(operatorId: number) {
@@ -42,7 +42,6 @@ function PlansContent() {
   }
 
   async function subscribe(planId: number) {
-    setMessage(null);
     try {
       const sub = await apiFetch<Subscription>("/subscriptions", {
         method: "POST",
@@ -52,23 +51,35 @@ function PlansContent() {
         method: "POST",
         body: JSON.stringify({ subscription_id: sub.id, payment_method: "card" }),
       });
-      setMessage({ type: "success", text: "Subscribed! Your discount now applies to sessions at that network." });
+      toast.success("Subscribed! Your discount now applies to sessions at that network.");
       await load();
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function cancelSubscription(id: number) {
     if (!confirm("Cancel this subscription? You'll lose the discount immediately.")) return;
-    setMessage(null);
     try {
       await apiFetch(`/subscriptions/${id}/cancel`, { method: "POST" });
-      setMessage({ type: "success", text: "Subscription cancelled." });
+      toast.success("Subscription cancelled.");
       await load();
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
+  }
+
+  if (plans === null) {
+    return (
+      <div className="space-y-8">
+        <PageHeader title="Charging Plans" subtitle="Loading plans…" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-56" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const operators = Array.from(new Map(plans.map((p) => [p.operator_id, p.operator_name])).entries());
@@ -79,7 +90,6 @@ function PlansContent() {
         title="Charging Plans"
         subtitle="Each network sets its own plans. A subscription's discount only applies at that network's stations — subscribe to more than one if you charge across networks."
       />
-      {message && <Alert type={message.type}>{message.text}</Alert>}
 
       {operators.map(([operatorId, operatorName]) => {
         const activeSubscription = activeSubscriptionFor(operatorId);
@@ -104,7 +114,7 @@ function PlansContent() {
               </div>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {operatorPlans.map((plan) => {
                 const isCurrent = activeSubscription?.plan_id === plan.id;
                 const isFeatured = Number(plan.discount_percentage) === featured && operatorPlans.length > 1;

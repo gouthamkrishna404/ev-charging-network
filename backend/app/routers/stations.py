@@ -11,8 +11,10 @@ router = APIRouter(prefix="/stations", tags=["stations"])
 def _station_query(db: Session):
     return db.query(ChargingStation).options(
         joinedload(ChargingStation.location),
+        joinedload(ChargingStation.operator),
         joinedload(ChargingStation.tariff),
         joinedload(ChargingStation.operating_hours),
+        joinedload(ChargingStation.reviews),
         joinedload(ChargingStation.chargers)
         .joinedload(Charger.connectors)
         .joinedload(Connector.connector_type),

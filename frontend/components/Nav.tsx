@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  BarChart3,
   Calendar,
   Car,
   History,
@@ -29,6 +30,7 @@ interface NavLink {
 
 const ADMIN_LINKS: NavLink[] = [
   { href: "/admin", label: "My Stations", icon: LayoutGrid },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/refunds", label: "Refunds", icon: RotateCcw },
   { href: "/admin/audit-log", label: "Audit Log", icon: History },
   { href: "/admin/plans", label: "Plans", icon: Tag },

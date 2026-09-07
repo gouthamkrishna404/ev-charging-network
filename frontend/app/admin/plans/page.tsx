@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Plus, RotateCcw, Tag, X } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
 import { ChargingPlan } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Skeleton } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function AdminPlansPage() {
@@ -17,14 +18,13 @@ export default function AdminPlansPage() {
 }
 
 function AdminPlansContent() {
-  const [plans, setPlans] = useState<ChargingPlan[]>([]);
+  const [plans, setPlans] = useState<ChargingPlan[] | null>(null);
   const [planName, setPlanName] = useState("");
   const [fee, setFee] = useState("299");
   const [validityDays, setValidityDays] = useState("30");
   const [discount, setDiscount] = useState("10");
   const [priorityBooking, setPriorityBooking] = useState(false);
   const [maxSessions, setMaxSessions] = useState("");
-  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [canManage, setCanManage] = useState(false);
 
   async function load() {
@@ -33,12 +33,11 @@ function AdminPlansContent() {
 
   useEffect(() => {
     setCanManage(isSuperAdmin());
-    load();
+    load().catch((err) => toast.error(err instanceof ApiError ? err.message : "Failed to load plans"));
   }, []);
 
   async function createPlan(e: React.FormEvent) {
     e.preventDefault();
-    setMessage(null);
     try {
       await apiFetch("/admin/plans", {
         method: "POST",
@@ -52,22 +51,32 @@ function AdminPlansContent() {
         }),
       });
       setPlanName("");
-      setMessage({ type: "success", text: "Plan created." });
+      toast.success("Plan created.");
       await load();
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function deactivate(id: number) {
     if (!confirm("Deactivate this plan? Existing subscribers keep their discount until it expires, but no one new can subscribe.")) return;
-    await apiFetch(`/admin/plans/${id}/deactivate`, { method: "POST" });
-    await load();
+    try {
+      await apiFetch(`/admin/plans/${id}/deactivate`, { method: "POST" });
+      toast.success("Plan deactivated.");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
+    }
   }
 
   async function reactivate(id: number) {
-    await apiFetch(`/admin/plans/${id}/reactivate`, { method: "POST" });
-    await load();
+    try {
+      await apiFetch(`/admin/plans/${id}/reactivate`, { method: "POST" });
+      toast.success("Plan reactivated.");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
+    }
   }
 
   return (
@@ -76,10 +85,10 @@ function AdminPlansContent() {
         title="Charging Plans"
         subtitle="Subscription plans drivers can buy for a discount at your stations specifically — other networks' subscribers don't get your discount, and vice versa."
       />
-      {message && <Alert type={message.type}>{message.text}</Alert>}
 
       <ul className="space-y-2">
-        {plans.map((plan) => (
+        {plans === null && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-[52px]" />)}
+        {plans?.map((plan) => (
           <Card key={plan.id} className="p-3 flex items-center justify-between text-sm">
             <span className="flex items-center gap-3">
               <IconTile icon={Tag} tone={plan.status === "active" ? "indigo" : "slate"} />
@@ -103,7 +112,7 @@ function AdminPlansContent() {
             </div>
           </Card>
         ))}
-        {plans.length === 0 && <EmptyState icon={Tag}>No plans yet.</EmptyState>}
+        {plans?.length === 0 && <EmptyState icon={Tag}>No plans yet.</EmptyState>}
       </ul>
 
       {canManage ? (

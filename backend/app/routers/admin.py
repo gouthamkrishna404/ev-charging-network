@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
@@ -17,12 +17,14 @@ from app.models import (
     ChargingSession,
     ChargingStation,
     Connector,
+    ConnectorType,
     Location,
     Maintenance,
     Payment,
     Refund,
     StationAdmin,
     StationOperatingHours,
+    StationReview,
     Tariff,
     Technician,
 )
@@ -70,8 +72,10 @@ def _require_super_admin(admin: Admin) -> None:
 def _station_query(db: Session):
     return db.query(ChargingStation).options(
         joinedload(ChargingStation.location),
+        joinedload(ChargingStation.operator),
         joinedload(ChargingStation.tariff),
         joinedload(ChargingStation.operating_hours),
+        joinedload(ChargingStation.reviews),
         joinedload(ChargingStation.chargers)
         .joinedload(Charger.connectors)
         .joinedload(Connector.connector_type),
@@ -504,6 +508,109 @@ def reject_refund(refund_id: int, admin: Admin = Depends(get_current_admin), db:
     db.commit()
     db.refresh(refund)
     return refund
+
+
+# ---------- Analytics ----------
+
+@router.get("/analytics/overview")
+def analytics_overview(
+    days: int = 30, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)
+):
+    station_ids = _managed_station_ids(admin, db)
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    if not station_ids:
+        return {
+            "kpis": {"total_revenue": 0.0, "total_sessions": 0, "active_stations": 0, "avg_rating": None},
+            "daily": [],
+            "by_station": [],
+            "by_connector_type": [],
+        }
+
+    def _bill_query():
+        return (
+            db.query(Bill)
+            .join(ChargingSession, Bill.session_id == ChargingSession.id)
+            .join(Connector, ChargingSession.connector_id == Connector.id)
+            .join(Charger, Connector.charger_id == Charger.id)
+            .filter(Charger.station_id.in_(station_ids))
+        )
+
+    total_revenue = _bill_query().with_entities(func.coalesce(func.sum(Bill.total_amount), 0)).scalar()
+    total_sessions = _bill_query().with_entities(func.count(Bill.id)).scalar()
+    active_stations = (
+        db.query(func.count(ChargingStation.id))
+        .filter(ChargingStation.id.in_(station_ids), ChargingStation.status == "active")
+        .scalar()
+    )
+    avg_rating = (
+        db.query(func.avg(StationReview.rating))
+        .filter(StationReview.station_id.in_(station_ids))
+        .scalar()
+    )
+
+    daily_rows = (
+        _bill_query()
+        .with_entities(
+            func.date(Bill.generated_date).label("day"),
+            func.coalesce(func.sum(Bill.total_amount), 0).label("revenue"),
+            func.count(Bill.id).label("sessions"),
+        )
+        .filter(Bill.generated_date >= since)
+        .group_by(func.date(Bill.generated_date))
+        .order_by(func.date(Bill.generated_date))
+        .all()
+    )
+
+    by_station_rows = (
+        db.query(
+            ChargingStation.id,
+            ChargingStation.station_name,
+            func.coalesce(func.sum(Bill.total_amount), 0),
+            func.count(Bill.id),
+        )
+        .select_from(ChargingStation)
+        .outerjoin(Charger, Charger.station_id == ChargingStation.id)
+        .outerjoin(Connector, Connector.charger_id == Charger.id)
+        .outerjoin(ChargingSession, ChargingSession.connector_id == Connector.id)
+        .outerjoin(Bill, Bill.session_id == ChargingSession.id)
+        .filter(ChargingStation.id.in_(station_ids))
+        .group_by(ChargingStation.id, ChargingStation.station_name)
+        .order_by(ChargingStation.station_name)
+        .all()
+    )
+
+    by_connector_type_rows = (
+        db.query(ConnectorType.type_name, func.count(ChargingSession.id))
+        .select_from(ChargingSession)
+        .join(Connector, ChargingSession.connector_id == Connector.id)
+        .join(ConnectorType, Connector.connector_type_id == ConnectorType.id)
+        .join(Charger, Connector.charger_id == Charger.id)
+        .filter(Charger.station_id.in_(station_ids), ChargingSession.session_status == "completed")
+        .group_by(ConnectorType.type_name)
+        .order_by(ConnectorType.type_name)
+        .all()
+    )
+
+    return {
+        "kpis": {
+            "total_revenue": float(total_revenue or 0),
+            "total_sessions": int(total_sessions or 0),
+            "active_stations": int(active_stations or 0),
+            "avg_rating": round(float(avg_rating), 2) if avg_rating is not None else None,
+        },
+        "daily": [
+            {"date": str(row.day), "revenue": float(row.revenue), "sessions": int(row.sessions)}
+            for row in daily_rows
+        ],
+        "by_station": [
+            {"station_id": sid, "station_name": name, "revenue": float(revenue), "sessions": int(sessions)}
+            for sid, name, revenue, sessions in by_station_rows
+        ],
+        "by_connector_type": [
+            {"type_name": type_name, "sessions": int(sessions)} for type_name, sessions in by_connector_type_rows
+        ],
+    }
 
 
 # ---------- Audit log ----------

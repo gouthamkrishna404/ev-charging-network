@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Check, RotateCcw, X } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
+import { apiFetch, ApiError } from "@/lib/api";
 import { AdminRefund } from "@/lib/admin-types";
-import { Badge, Button, Card, EmptyState, IconTile, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, IconTile, PageHeader, Skeleton } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function AdminRefundsPage() {
@@ -16,27 +17,33 @@ export default function AdminRefundsPage() {
 }
 
 function AdminRefundsContent() {
-  const [refunds, setRefunds] = useState<AdminRefund[]>([]);
+  const [refunds, setRefunds] = useState<AdminRefund[] | null>(null);
 
   async function load() {
     setRefunds(await apiFetch<AdminRefund[]>("/admin/refunds"));
   }
 
   useEffect(() => {
-    load();
+    load().catch((err) => toast.error(err instanceof ApiError ? err.message : "Failed to load refunds"));
   }, []);
 
   async function resolve(id: number, action: "approve" | "reject") {
     if (!confirm(`${action === "approve" ? "Approve" : "Reject"} this refund request?`)) return;
-    await apiFetch(`/admin/refunds/${id}/${action}`, { method: "POST" });
-    await load();
+    try {
+      await apiFetch(`/admin/refunds/${id}/${action}`, { method: "POST" });
+      toast.success(action === "approve" ? "Refund approved." : "Refund rejected.");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
+    }
   }
 
   return (
     <div>
       <PageHeader title="Refund Requests" subtitle="Refunds requested by drivers on bills at your stations." />
       <ul className="space-y-3">
-        {refunds.map((r) => (
+        {refunds === null && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-[76px]" />)}
+        {refunds?.map((r) => (
           <Card key={r.id} className="p-4 flex items-center gap-3">
             <IconTile icon={RotateCcw} tone={r.status === "pending" ? "amber" : "slate"} />
             <div className="flex-1 min-w-0 text-sm">
@@ -61,7 +68,7 @@ function AdminRefundsContent() {
             </div>
           </Card>
         ))}
-        {refunds.length === 0 && <EmptyState icon={RotateCcw}>No refund requests.</EmptyState>}
+        {refunds?.length === 0 && <EmptyState icon={RotateCcw}>No refund requests.</EmptyState>}
       </ul>
     </div>
   );

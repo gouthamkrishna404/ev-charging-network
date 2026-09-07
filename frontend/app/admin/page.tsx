@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  ArrowRight,
   Ban,
+  BarChart3,
   Building2,
   Calendar,
   CheckCircle2,
@@ -13,13 +16,13 @@ import {
   Plus,
   Power,
   Tag,
-  TrendingUp,
   UserMinus,
   UserPlus,
   Users,
   Wrench,
   Zap,
 } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
 import { ConnectorTypeOut, Station } from "@/lib/types";
@@ -56,9 +59,9 @@ function AdminContent() {
   const [team, setTeam] = useState<TeamAdmin[]>([]);
   const [stationAdmins, setStationAdmins] = useState<TeamAdmin[]>([]);
   const [assignAdminId, setAssignAdminId] = useState<number | "">("");
-  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [canManageTeam, setCanManageTeam] = useState(false);
-  const [revenueByStation, setRevenueByStation] = useState<Record<number, Revenue>>({});
+  const [networkTotals, setNetworkTotals] = useState<{ revenue: number; sessions: number } | null>(null);
 
   const [showNewStation, setShowNewStation] = useState(false);
   const [stationName, setStationName] = useState("");
@@ -81,23 +84,20 @@ function AdminContent() {
 
   async function load() {
     try {
-      const [s, ct, tech, tm] = await Promise.all([
+      const [s, ct, tech, tm, analytics] = await Promise.all([
         apiFetch<Station[]>("/admin/stations"),
         apiFetch<ConnectorTypeOut[]>("/connector-types"),
         apiFetch<Technician[]>("/admin/technicians"),
         apiFetch<TeamAdmin[]>("/admin/team"),
+        apiFetch<{ kpis: { total_revenue: number; total_sessions: number } }>("/admin/analytics/overview?days=36500"),
       ]);
       setStations(s);
       setConnectorTypes(ct);
       setTechnicians(tech);
       setTeam(tm);
-
-      const revenues = await Promise.all(
-        s.map((station) => apiFetch<Revenue>(`/admin/stations/${station.id}/revenue`))
-      );
-      setRevenueByStation(Object.fromEntries(s.map((station, i) => [station.id, revenues[i]])));
+      setNetworkTotals({ revenue: analytics.kpis.total_revenue, sessions: analytics.kpis.total_sessions });
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Failed to load dashboard data" });
+      setLoadError(err instanceof ApiError ? err.message : "Failed to load dashboard data");
     }
   }
 
@@ -148,7 +148,7 @@ function AdminContent() {
       setAssignAdminId("");
       setStationAdmins(await apiFetch<TeamAdmin[]>(`/admin/stations/${stationId}/admins`));
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
@@ -158,13 +158,12 @@ function AdminContent() {
       await apiFetch(`/admin/stations/${stationId}/admins/${adminId}`, { method: "DELETE" });
       setStationAdmins(await apiFetch<TeamAdmin[]>(`/admin/stations/${stationId}/admins`));
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function createStation(e: React.FormEvent) {
     e.preventDefault();
-    setMessage(null);
     try {
       await apiFetch("/admin/stations", {
         method: "POST",
@@ -179,10 +178,10 @@ function AdminContent() {
       setCity("");
       setStateName("");
       setShowNewStation(false);
-      setMessage({ type: "success", text: "Station created." });
+      toast.success("Station created.");
       await load();
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
@@ -196,7 +195,7 @@ function AdminContent() {
       setChargerModel("");
       await load();
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
@@ -210,7 +209,7 @@ function AdminContent() {
       });
       await load();
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
@@ -225,22 +224,22 @@ function AdminContent() {
         method: "PUT",
         body: JSON.stringify(payload),
       });
-      setMessage({ type: "success", text: "Operating hours updated." });
+      toast.success("Operating hours updated.");
       await load();
       setExpanded(stationId);
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function updateTariff(stationId: number) {
     try {
       await apiFetch(`/admin/stations/${stationId}/tariff?price_per_kwh=${Number(editPrice)}`, { method: "PUT" });
-      setMessage({ type: "success", text: "Price updated." });
+      toast.success("Price updated.");
       await load();
       setExpanded(stationId);
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
@@ -250,11 +249,11 @@ function AdminContent() {
       return;
     try {
       await apiFetch(`/admin/stations/${stationId}/status?new_status=${next}`, { method: "PUT" });
-      setMessage({ type: "success", text: `Station marked ${next}.` });
+      toast.success(`Station marked ${next}.`);
       await load();
       setExpanded(stationId);
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
@@ -278,15 +277,20 @@ function AdminContent() {
       const m = await apiFetch<Maintenance[]>(`/admin/stations/${stationId}/maintenance`);
       setMaintenance(m);
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function completeMaintenance(ticketId: number, stationId: number) {
-    await apiFetch(`/admin/maintenance/${ticketId}/complete`, { method: "POST" });
-    await load();
-    const m = await apiFetch<Maintenance[]>(`/admin/stations/${stationId}/maintenance`);
-    setMaintenance(m);
+    try {
+      await apiFetch(`/admin/maintenance/${ticketId}/complete`, { method: "POST" });
+      toast.success("Maintenance ticket marked complete.");
+      await load();
+      const m = await apiFetch<Maintenance[]>(`/admin/stations/${stationId}/maintenance`);
+      setMaintenance(m);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
+    }
   }
 
   return (
@@ -300,54 +304,35 @@ function AdminContent() {
           </Button>
         }
       />
-      {message && <Alert type={message.type}>{message.text}</Alert>}
+      {loadError && <Alert type="error">{loadError}</Alert>}
 
-      {stations.length > 0 && (
-        <Card className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} className="text-slate-400" />
-            <p className="text-sm font-semibold text-slate-700">Network overview</p>
-          </div>
-          <div className="flex gap-10 mb-5">
-            <Stat
-              value={`₹${stations.reduce((sum, s) => sum + Number(revenueByStation[s.id]?.total_revenue ?? 0), 0).toFixed(2)}`}
-              label="total revenue"
-            />
-            <Stat
-              value={stations.reduce((sum, s) => sum + (revenueByStation[s.id]?.completed_sessions ?? 0), 0)}
-              label="completed sessions"
-            />
-            <Stat value={stations.length} label="stations" />
-          </div>
-          <ul className="space-y-2.5">
-            {(() => {
-              const maxRevenue = Math.max(...stations.map((s) => Number(revenueByStation[s.id]?.total_revenue ?? 0)), 1);
-              return stations.map((s) => {
-                const rev = Number(revenueByStation[s.id]?.total_revenue ?? 0);
-                const pct = Math.max((rev / maxRevenue) * 100, rev > 0 ? 4 : 0);
-                return (
-                  <li key={s.id} className="flex items-center gap-3 text-sm">
-                    <span className="w-48 sm:w-56 truncate text-slate-600 shrink-0" title={s.station_name}>
-                      {s.station_name}
-                    </span>
-                    <div className="flex-1 h-5 rounded-md bg-slate-100 overflow-hidden">
-                      <div
-                        className="h-full rounded-md bg-gradient-to-r from-indigo-500 to-indigo-400 transition-all duration-500"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <span className="w-20 text-right font-medium text-slate-900 shrink-0">₹{rev.toFixed(0)}</span>
-                  </li>
-                );
-              });
-            })()}
-          </ul>
-        </Card>
+      {stations.length > 0 && networkTotals && (
+        <Link href="/admin/analytics">
+          <Card className="p-5" interactive>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+                <div className="flex items-center gap-3">
+                  <IconTile icon={BarChart3} tone="indigo" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">Network overview</p>
+                    <p className="text-xs text-slate-400">Full analytics, trends &amp; breakdowns →</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-6">
+                  <Stat value={`₹${networkTotals.revenue.toLocaleString("en-IN")}`} label="total revenue" />
+                  <Stat value={networkTotals.sessions} label="completed sessions" />
+                  <Stat value={stations.length} label="stations" />
+                </div>
+              </div>
+              <ArrowRight size={18} className="text-slate-300 shrink-0" />
+            </div>
+          </Card>
+        </Link>
       )}
 
       {showNewStation && (
         <Card className="p-5">
-          <form onSubmit={createStation} className="grid gap-3 sm:grid-cols-2">
+          <form onSubmit={createStation} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Station name">
               <Input className="w-full" value={stationName} onChange={(e) => setStationName(e.target.value)} required />
             </Field>

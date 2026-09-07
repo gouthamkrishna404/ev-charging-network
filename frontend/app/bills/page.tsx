@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { CreditCard, Receipt, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Bill } from "@/lib/types";
-import { Alert, Badge, Button, Card, EmptyState, IconTile, Input, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, IconTile, Input, PageHeader, Skeleton } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function BillsPage() {
@@ -16,10 +17,9 @@ export default function BillsPage() {
 }
 
 function BillsContent() {
-  const [bills, setBills] = useState<Bill[]>([]);
+  const [bills, setBills] = useState<Bill[] | null>(null);
   const [refundReasonByBill, setRefundReasonByBill] = useState<Record<number, string>>({});
   const [refundFormOpenFor, setRefundFormOpenFor] = useState<number | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   async function load() {
     const b = await apiFetch<Bill[]>("/bills/me");
@@ -27,27 +27,26 @@ function BillsContent() {
   }
 
   useEffect(() => {
-    load();
+    load().catch((err) => toast.error(err instanceof ApiError ? err.message : "Failed to load your bills"));
   }, []);
 
   async function pay(billId: number) {
-    setMessage(null);
     try {
       await apiFetch("/payments", {
         method: "POST",
         body: JSON.stringify({ bill_id: billId, payment_method: "upi" }),
       });
+      toast.success("Payment successful.");
       await load();
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : "Something went wrong");
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function requestRefund(paymentId: number) {
-    setMessage(null);
     const reason = refundReasonByBill[paymentId];
     if (!reason) {
-      setMessage("Enter a reason for the refund request.");
+      toast.error("Enter a reason for the refund request.");
       return;
     }
     try {
@@ -55,10 +54,11 @@ function BillsContent() {
         method: "POST",
         body: JSON.stringify({ reason }),
       });
+      toast.success("Refund requested — the operator will review it.");
       setRefundFormOpenFor(null);
       await load();
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : "Something went wrong");
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
@@ -68,9 +68,9 @@ function BillsContent() {
         title="My Bills"
         subtitle="One bill per charging session, generated the moment you end it. Active subscription discounts are applied automatically before tax."
       />
-      {message && <Alert type="error">{message}</Alert>}
       <ul className="space-y-3">
-        {bills.map((bill) => (
+        {bills === null && [...Array(3)].map((_, i) => <Skeleton key={i} className="h-[76px]" />)}
+        {bills?.map((bill) => (
           <Card key={bill.id} className="p-4">
             <div className="flex items-start gap-3">
               <IconTile icon={Receipt} tone={bill.payment ? "slate" : "amber"} />
@@ -113,7 +113,7 @@ function BillsContent() {
             )}
           </Card>
         ))}
-        {bills.length === 0 && (
+        {bills?.length === 0 && (
           <EmptyState icon={Receipt}>No bills yet — they appear automatically once you end a charging session.</EmptyState>
         )}
       </ul>

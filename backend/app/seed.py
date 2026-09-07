@@ -1,9 +1,16 @@
-"""Populate the database with sample data across every table.
+"""Populate the database with a rich, realistic dataset across every table.
+
+Generates two competing operators running 13 stations across 7 Indian cities,
+~14 drivers with vehicles and subscriptions, and ~90 days of randomized (but
+seeded, so reproducible) historical charging activity -- sessions, bills,
+payments, refunds, reviews, and maintenance tickets -- on top of a couple of
+deterministic "narrative" records used in the live demo walkthrough.
 
 Run after migrations are applied:
     venv\\Scripts\\python -m app.seed
 """
 
+import random
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
@@ -40,274 +47,565 @@ from app.models import (
 )
 
 DEMO_PASSWORD = "Password123!"
+TAX_RATE = Decimal("0.05")
+ALL_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+rng = random.Random(20260907)
+
+CHARGER_TEMPLATES = {
+    "fast_dc": {
+        "charger_model": "ABB Terra 184",
+        "power_capacity_kw": Decimal("180.00"),
+        "connectors": [("CCS2", Decimal("150.00"))],
+    },
+    "fast_dc_dual": {
+        "charger_model": "Exicom Harmony",
+        "power_capacity_kw": Decimal("120.00"),
+        "connectors": [("CCS2", Decimal("100.00")), ("CHAdeMO", Decimal("50.00"))],
+    },
+    "ac_slow": {
+        "charger_model": "Delta AC Max",
+        "power_capacity_kw": Decimal("22.00"),
+        "connectors": [("Type 2", Decimal("22.00"))],
+    },
+    "ac_compact": {
+        "charger_model": "Servotech AC001",
+        "power_capacity_kw": Decimal("7.40"),
+        "connectors": [("Type 1", Decimal("7.40"))],
+    },
+}
+
+REVIEW_COMMENTS = {
+    5: [
+        "Fast and reliable, plenty of parking nearby.",
+        "Never had to wait, connector was in great shape.",
+        "Best charging stop on my commute -- consistently fast.",
+        "Clean, well-lit, and the app made starting a session effortless.",
+        "Staff on-site were helpful when I had a connector question.",
+    ],
+    4: [
+        "Good experience overall, one connector was slower than rated.",
+        "Solid station, a bit of a queue during evening rush.",
+        "Reliable charging, wish there were more fast connectors.",
+        "Worked well, parking was a little tight.",
+    ],
+    3: [
+        "Charging was fine but the app took a while to recognize the session ended.",
+        "Decent, though signage for the connectors could be clearer.",
+        "Average wait time, got the job done.",
+    ],
+    2: [
+        "One connector was out of service when I arrived.",
+        "Charging speed was noticeably below the rated power.",
+    ],
+}
+
+REFUND_REASONS = [
+    "Charging stopped early due to a connector fault",
+    "Billed for more energy than was actually delivered",
+    "Session failed to start but was still charged",
+    "Duplicate payment for the same session",
+]
+
+RTO_CODES = {
+    "Bengaluru": "KA",
+    "Pune": "MH",
+    "Hyderabad": "TS",
+    "Mumbai": "MH",
+    "Delhi": "DL",
+    "Gurugram": "HR",
+    "Chennai": "TN",
+}
+
+DRIVER_NAMES = [
+    "Demo Driver",
+    "Rohan Sharma",
+    "Priya Menon",
+    "Arjun Nair",
+    "Sneha Kulkarni",
+    "Vikram Singh",
+    "Ananya Reddy",
+    "Karthik Subramaniam",
+    "Isha Verma",
+    "Aditya Joshi",
+    "Neha Kapoor",
+    "Rahul Desai",
+    "Divya Pillai",
+    "Manish Agarwal",
+]
+
+VEHICLE_MODEL_SPECS = [
+    ("Tata", "Nexon EV", Decimal("30.20"), ["CCS2", "Type 2"]),
+    ("Tata", "Punch EV", Decimal("25.00"), ["CCS2", "Type 2"]),
+    ("MG", "Comet EV", Decimal("17.30"), ["Type 1", "Type 2"]),
+    ("MG", "ZS EV", Decimal("50.30"), ["CCS2", "Type 2"]),
+    ("Hyundai", "Ioniq 5", Decimal("72.60"), ["CCS2"]),
+    ("Kia", "EV6", Decimal("77.40"), ["CCS2"]),
+    ("Tesla", "Model 3", Decimal("60.00"), ["CCS2", "Type 2"]),
+    ("Mahindra", "XUV400", Decimal("39.40"), ["CCS2", "Type 2"]),
+    ("BYD", "Atto 3", Decimal("60.48"), ["CCS2", "CHAdeMO"]),
+]
+
+# (operator_key, station_name, address, city, state, lat, lng, price_per_kwh, hours_profile, charger_keys)
+STATION_SPECS = [
+    ("volt_grid", "Volt Grid - MG Road", "100 MG Road", "Bengaluru", "Karnataka", "12.975700", "77.605600",
+     Decimal("12.50"), "standard_6_days", ["fast_dc", "fast_dc_dual", "ac_slow"]),
+    ("volt_grid", "Volt Grid - Koramangala Block A", "5th Block, Koramangala", "Bengaluru", "Karnataka", "12.935200", "77.624500",
+     Decimal("12.50"), "always_open", ["fast_dc", "ac_slow"]),
+    ("volt_grid", "Volt Grid - Koramangala Block B", "5th Block, Koramangala", "Bengaluru", "Karnataka", "12.935200", "77.624500",
+     Decimal("13.00"), "always_open", ["fast_dc", "ac_compact"]),
+    ("volt_grid", "Volt Grid - Indiranagar", "100 Feet Road, Indiranagar", "Bengaluru", "Karnataka", "12.978400", "77.640800",
+     Decimal("13.50"), "extended", ["ac_slow", "ac_compact"]),
+    ("volt_grid", "Volt Grid - Kalyani Nagar", "Kalyani Nagar Main Road", "Pune", "Maharashtra", "18.547900", "73.901200",
+     Decimal("11.80"), "standard_6_days", ["fast_dc", "ac_slow"]),
+    ("volt_grid", "Volt Grid - Hitech City", "Hitech City Road", "Hyderabad", "Telangana", "17.443500", "78.377200",
+     Decimal("11.50"), "always_open", ["fast_dc", "fast_dc_dual", "ac_slow", "ac_compact"]),
+    ("chargenow", "ChargeNow - Whitefield", "ITPL Main Road, Whitefield", "Bengaluru", "Karnataka", "12.969800", "77.750000",
+     Decimal("12.20"), "standard_6_days", ["fast_dc", "ac_slow"]),
+    ("chargenow", "ChargeNow - Bandra Kurla Complex", "G Block, Bandra Kurla Complex", "Mumbai", "Maharashtra", "19.066000", "72.869700",
+     Decimal("15.00"), "always_open", ["fast_dc", "fast_dc_dual", "ac_slow"]),
+    ("chargenow", "ChargeNow - Powai", "Hiranandani Gardens, Powai", "Mumbai", "Maharashtra", "19.117600", "72.906000",
+     Decimal("14.00"), "extended", ["ac_slow", "ac_compact"]),
+    ("chargenow", "ChargeNow - Connaught Place", "Inner Circle, Connaught Place", "Delhi", "Delhi", "28.631500", "77.216700",
+     Decimal("14.50"), "commercial", ["fast_dc", "ac_slow"]),
+    ("chargenow", "ChargeNow - Cyber Hub", "DLF Cyber Hub", "Gurugram", "Haryana", "28.495000", "77.089000",
+     Decimal("13.80"), "always_open", ["fast_dc", "fast_dc_dual", "ac_slow", "ac_compact"]),
+    ("chargenow", "ChargeNow - OMR Sholinganallur", "Rajiv Gandhi Salai, Sholinganallur", "Chennai", "Tamil Nadu", "12.901000", "80.227900",
+     Decimal("11.00"), "standard_6_days", ["fast_dc", "ac_slow"]),
+    ("chargenow", "ChargeNow - Anna Nagar", "2nd Avenue, Anna Nagar", "Chennai", "Tamil Nadu", "13.085000", "80.210100",
+     Decimal("11.20"), "always_open", ["ac_slow", "ac_compact"]),
+]
+
+
+def _plate(rng_: random.Random, city: str) -> str:
+    code = RTO_CODES.get(city, "KA")
+    return f"{code}{rng_.randint(1, 9):02d}{chr(65 + rng_.randint(0, 25))}{chr(65 + rng_.randint(0, 25))}{rng_.randint(1000, 9999)}"
+
+
+def _add_station(db, operator, location, name, price_per_kwh, hours_profile, charger_keys, admins, connector_types, log_admin):
+    station = ChargingStation(operator_id=operator.id, location_id=location.id, station_name=name, status="active")
+    db.add(station)
+    db.flush()
+
+    db.add(Tariff(station_id=station.id, price_per_kwh=price_per_kwh))
+    for admin in admins:
+        db.add(StationAdmin(station_id=station.id, admin_id=admin.id))
+    db.add(AuditLog(
+        admin_id=log_admin.id, action="Create", table_affected="charging_stations",
+        record_id=station.id, description=f"Created station '{name}'",
+    ))
+
+    if hours_profile == "standard_6_days":
+        for day in ALL_DAYS[:6]:
+            db.add(StationOperatingHours(station_id=station.id, day_of_week=day, opening_time=time(6, 0), closing_time=time(22, 0)))
+    elif hours_profile == "commercial":
+        for day in ALL_DAYS:
+            db.add(StationOperatingHours(station_id=station.id, day_of_week=day, opening_time=time(9, 0), closing_time=time(21, 0)))
+    elif hours_profile == "extended":
+        for day in ALL_DAYS:
+            db.add(StationOperatingHours(station_id=station.id, day_of_week=day, opening_time=time(6, 0), closing_time=time(23, 0)))
+    # "always_open" -> no rows at all (station treated as always open)
+
+    created_connectors = []
+    for key in charger_keys:
+        tmpl = CHARGER_TEMPLATES[key]
+        charger = Charger(
+            station_id=station.id, charger_model=tmpl["charger_model"],
+            power_capacity_kw=tmpl["power_capacity_kw"], status="active",
+        )
+        db.add(charger)
+        db.flush()
+        for type_name, max_power in tmpl["connectors"]:
+            connector = Connector(
+                charger_id=charger.id, connector_type_id=connector_types[type_name].id, max_power_kw=max_power,
+            )
+            db.add(connector)
+            db.flush()
+            created_connectors.append({
+                "connector": connector, "type_name": type_name,
+                "station": station, "operator": operator, "price_per_kwh": price_per_kwh,
+            })
+    return station, created_connectors
 
 
 def run():
     db = SessionLocal()
     try:
-        operator = ChargingOperator(
-            operator_name="Volt Grid Networks",
-            contact_email="ops@voltgrid.example",
-            phone="9800000001",
-            status="active",
-        )
-        db.add(operator)
+        # ---------- Connector types ----------
+        connector_types = {
+            "CCS2": ConnectorType(type_name="CCS2", standard_max_power_kw=Decimal("150.00")),
+            "Type 2": ConnectorType(type_name="Type 2", standard_max_power_kw=Decimal("22.00")),
+            "CHAdeMO": ConnectorType(type_name="CHAdeMO", standard_max_power_kw=Decimal("50.00")),
+            "Type 1": ConnectorType(type_name="Type 1", standard_max_power_kw=Decimal("7.40")),
+        }
+        db.add_all(connector_types.values())
         db.flush()
 
-        admin = Admin(
-            operator_id=operator.id,
-            name="Asha Rao",
-            email="admin@voltgrid.example",
-            password_hash=hash_password(DEMO_PASSWORD),
-            role="super_admin",
-            status="active",
-        )
-        db.add(admin)
-
-        ccs2 = ConnectorType(type_name="CCS2", standard_max_power_kw=Decimal("150.00"))
-        type2 = ConnectorType(type_name="Type 2", standard_max_power_kw=Decimal("22.00"))
-        chademo = ConnectorType(type_name="CHAdeMO", standard_max_power_kw=Decimal("50.00"))
-        db.add_all([ccs2, type2, chademo])
+        # ---------- Vehicle models + connector compatibility ----------
+        models = {}
+        model_supported_types: dict[int, set[str]] = {}
+        for make, model_name, battery, supported in VEHICLE_MODEL_SPECS:
+            model = VehicleModel(make=make, model_name=model_name, battery_capacity_kwh=battery)
+            db.add(model)
+            db.flush()
+            models[(make, model_name)] = model
+            model_supported_types[model.id] = set(supported)
+            for type_name in supported:
+                db.add(ModelConnectorType(model_id=model.id, connector_type_id=connector_types[type_name].id))
         db.flush()
 
-        nexon = VehicleModel(make="Tata", model_name="Nexon EV", battery_capacity_kwh=Decimal("30.20"))
-        ioniq5 = VehicleModel(make="Hyundai", model_name="Ioniq 5", battery_capacity_kwh=Decimal("72.60"))
-        model3 = VehicleModel(make="Tesla", model_name="Model 3", battery_capacity_kwh=Decimal("60.00"))
-        db.add_all([nexon, ioniq5, model3])
+        # ---------- Operators, admins, technicians, plans ----------
+        volt_grid = ChargingOperator(operator_name="Volt Grid Networks", contact_email="ops@voltgrid.example", phone="9800000001", status="active")
+        chargenow = ChargingOperator(operator_name="ChargeNow India", contact_email="ops@chargenow.example", phone="9800000002", status="active")
+        db.add_all([volt_grid, chargenow])
+        db.flush()
+        operators = {"volt_grid": volt_grid, "chargenow": chargenow}
+
+        admin_asha = Admin(operator_id=volt_grid.id, name="Asha Rao", email="admin@voltgrid.example",
+                            password_hash=hash_password(DEMO_PASSWORD), role="super_admin", status="active")
+        admin_karan = Admin(operator_id=volt_grid.id, name="Karan Mehta", email="karan.mehta@voltgrid.example",
+                             password_hash=hash_password(DEMO_PASSWORD), role="station_manager", status="active")
+        admin_divya = Admin(operator_id=chargenow.id, name="Divya Nair", email="admin@chargenow.example",
+                             password_hash=hash_password(DEMO_PASSWORD), role="super_admin", status="active")
+        admin_farah = Admin(operator_id=chargenow.id, name="Farah Khan", email="farah.khan@chargenow.example",
+                             password_hash=hash_password(DEMO_PASSWORD), role="finance_manager", status="active")
+        db.add_all([admin_asha, admin_karan, admin_divya, admin_farah])
         db.flush()
 
-        db.add_all(
-            [
-                ModelConnectorType(model_id=nexon.id, connector_type_id=ccs2.id),
-                ModelConnectorType(model_id=nexon.id, connector_type_id=type2.id),
-                ModelConnectorType(model_id=ioniq5.id, connector_type_id=ccs2.id),
-                ModelConnectorType(model_id=model3.id, connector_type_id=ccs2.id),
-                ModelConnectorType(model_id=model3.id, connector_type_id=type2.id),
-            ]
-        )
-
-        location_mg_road = Location(
-            address_line="100 MG Road", city="Bengaluru", state="Karnataka",
-            latitude=Decimal("12.975700"), longitude=Decimal("77.605600"),
-        )
-        location_koramangala = Location(
-            address_line="5th Block, Koramangala", city="Bengaluru", state="Karnataka",
-            latitude=Decimal("12.935200"), longitude=Decimal("77.624500"),
-        )
-        db.add_all([location_mg_road, location_koramangala])
+        technicians = {
+            "volt_grid": [
+                Technician(operator_id=volt_grid.id, name="Ravi Kumar", phone="9811111111", specialization="Electrical"),
+                Technician(operator_id=volt_grid.id, name="Meena Iyer", phone="9822222222", specialization="Networking"),
+            ],
+            "chargenow": [
+                Technician(operator_id=chargenow.id, name="Suresh Pillai", phone="9833333333", specialization="Mechanical"),
+                Technician(operator_id=chargenow.id, name="Fatima Sheikh", phone="9844444444", specialization="Electrical"),
+            ],
+        }
+        for group in technicians.values():
+            db.add_all(group)
         db.flush()
 
-        station_mg_road = ChargingStation(
-            operator_id=operator.id, location_id=location_mg_road.id,
-            station_name="Volt Grid - MG Road", status="active",
-        )
-        # Two stations sharing one physical location, e.g. separate blocks of the same mall.
-        station_koramangala_a = ChargingStation(
-            operator_id=operator.id, location_id=location_koramangala.id,
-            station_name="Volt Grid - Koramangala Block A", status="active",
-        )
-        station_koramangala_b = ChargingStation(
-            operator_id=operator.id, location_id=location_koramangala.id,
-            station_name="Volt Grid - Koramangala Block B", status="active",
-        )
-        db.add_all([station_mg_road, station_koramangala_a, station_koramangala_b])
+        plans = {
+            "volt_grid": [
+                ChargingPlan(operator_id=volt_grid.id, plan_name="Basic", subscription_fee=Decimal("199.00"), validity_days=30,
+                             discount_percentage=Decimal("5.00"), priority_booking=False, max_sessions=10),
+                ChargingPlan(operator_id=volt_grid.id, plan_name="Premium", subscription_fee=Decimal("499.00"), validity_days=30,
+                             discount_percentage=Decimal("15.00"), priority_booking=True, max_sessions=None),
+                ChargingPlan(operator_id=volt_grid.id, plan_name="Fleet", subscription_fee=Decimal("1999.00"), validity_days=90,
+                             discount_percentage=Decimal("25.00"), priority_booking=True, max_sessions=None),
+            ],
+            "chargenow": [
+                ChargingPlan(operator_id=chargenow.id, plan_name="Lite", subscription_fee=Decimal("149.00"), validity_days=30,
+                             discount_percentage=Decimal("8.00"), priority_booking=False, max_sessions=8),
+                ChargingPlan(operator_id=chargenow.id, plan_name="Standard", subscription_fee=Decimal("449.00"), validity_days=30,
+                             discount_percentage=Decimal("18.00"), priority_booking=True, max_sessions=None),
+                ChargingPlan(operator_id=chargenow.id, plan_name="Pro Fleet", subscription_fee=Decimal("2199.00"), validity_days=90,
+                             discount_percentage=Decimal("28.00"), priority_booking=True, max_sessions=None),
+            ],
+        }
+        for group in plans.values():
+            db.add_all(group)
         db.flush()
 
-        stations = [station_mg_road, station_koramangala_a, station_koramangala_b]
-        for station in stations:
-            db.add(Tariff(station_id=station.id, price_per_kwh=Decimal("12.50")))
-            db.add(StationAdmin(station_id=station.id, admin_id=admin.id))
-            db.add(AuditLog(
-                admin_id=admin.id, action="Create", table_affected="charging_stations",
-                record_id=station.id, description=f"Created station '{station.station_name}'",
+        # ---------- Locations + stations ----------
+        location_cache: dict[tuple[str, str], Location] = {}
+        all_connectors = []
+        admin_by_operator = {"volt_grid": [admin_asha, admin_karan], "chargenow": [admin_divya, admin_farah]}
+        log_admin_by_operator = {"volt_grid": admin_asha, "chargenow": admin_divya}
+        stations_by_name = {}
+
+        for operator_key, name, address, city, state, lat, lng, price, hours_profile, charger_keys in STATION_SPECS:
+            loc_key = (city, lat)
+            if loc_key not in location_cache:
+                location_cache[loc_key] = Location(
+                    address_line=address, city=city, state=state,
+                    latitude=Decimal(lat), longitude=Decimal(lng),
+                )
+                db.add(location_cache[loc_key])
+                db.flush()
+            operator = operators[operator_key]
+            # Only the station's *own* super admin plus one station manager get assigned, mirroring real access control.
+            admins = [a for a in admin_by_operator[operator_key] if a.role in ("super_admin", "station_manager")][:2]
+            station, connectors = _add_station(
+                db, operator, location_cache[loc_key], name, price, hours_profile, charger_keys,
+                admins, connector_types, log_admin_by_operator[operator_key],
+            )
+            stations_by_name[name] = station
+            all_connectors.extend(connectors)
+        db.flush()
+
+        # ---------- Drivers + vehicles ----------
+        model_list = list(models.values())
+        users = []
+        vehicles_by_user = {}
+        vehicle_owners_by_type: dict[str, list[tuple]] = {t: [] for t in connector_types}
+
+        for i, name in enumerate(DRIVER_NAMES):
+            email = "driver@example.com" if name == "Demo Driver" else f"{name.lower().replace(' ', '.')}@example.com"
+            city = rng.choice(list(RTO_CODES.keys()))
+            user = User(
+                name=name, email=email, password_hash=hash_password(DEMO_PASSWORD),
+                phone=f"98{rng.randint(10000000, 99999999)}", address=f"{rng.randint(1, 999)} {city} Main Road",
+                account_status="active",
+            )
+            db.add(user)
+            db.flush()
+            users.append(user)
+
+            # Cycle primary model assignment to guarantee every connector type has at least one compatible owner.
+            primary_model = model_list[i % len(model_list)]
+            reg = _plate(rng, city)
+            vehicle = Vehicle(user_id=user.id, model_id=primary_model.id, registration_number=reg, vehicle_status="active")
+            db.add(vehicle)
+            db.flush()
+            vehicles_by_user.setdefault(user.id, []).append(vehicle)
+            for type_name in model_supported_types[primary_model.id]:
+                vehicle_owners_by_type[type_name].append((user, vehicle))
+
+            if rng.random() < 0.3:
+                extra_model = rng.choice(model_list)
+                extra_vehicle = Vehicle(
+                    user_id=user.id, model_id=extra_model.id,
+                    registration_number=_plate(rng, city), vehicle_status="active",
+                )
+                db.add(extra_vehicle)
+                db.flush()
+                vehicles_by_user[user.id].append(extra_vehicle)
+                for type_name in model_supported_types[extra_model.id]:
+                    vehicle_owners_by_type[type_name].append((user, extra_vehicle))
+        db.flush()
+        demo_user = next(u for u in users if u.email == "driver@example.com")
+        demo_vehicle = vehicles_by_user[demo_user.id][0]
+
+        # ---------- Subscriptions ----------
+        subs_index: dict[tuple[int, int], list[tuple]] = {}
+        all_plans = plans["volt_grid"] + plans["chargenow"]
+        today = date.today()
+
+        def _create_subscription(user, plan, start_date, force_status=None):
+            end_date = start_date + timedelta(days=plan.validity_days)
+            status = force_status or ("active" if end_date >= today else "expired")
+            sub = Subscription(user_id=user.id, plan_id=plan.id, start_date=start_date, end_date=end_date,
+                                status=status, auto_renew=rng.random() < 0.5)
+            db.add(sub)
+            db.flush()
+            db.add(Payment(
+                subscription_id=sub.id, amount=plan.subscription_fee,
+                payment_date=datetime.combine(start_date, time(10, 0), tzinfo=timezone.utc),
+                payment_method=rng.choice(["card", "upi", "wallet", "net_banking"]),
+                payment_status="successful", transaction_reference=f"SIM-SUB{sub.id:05d}",
+            ))
+            subs_index.setdefault((user.id, plan.operator_id), []).append((start_date, end_date, plan.discount_percentage))
+            return sub
+
+        # Demo Driver keeps the specific Premium subscription used in the walkthrough narrative.
+        _create_subscription(demo_user, plans["volt_grid"][1], today - timedelta(days=10), force_status="active")
+
+        other_users = [u for u in users if u.id != demo_user.id]
+        for user in rng.sample(other_users, 7):
+            plan = rng.choice(all_plans)
+            start_date = today - timedelta(days=rng.randint(5, 85))
+            status_override = "cancelled" if rng.random() < 0.15 else None
+            _create_subscription(user, plan, start_date, force_status=status_override)
+        db.flush()
+
+        def _active_discount(user_id: int, operator_id: int, on_date: date) -> Decimal | None:
+            for start_date, end_date, discount in subs_index.get((user_id, operator_id), []):
+                if start_date <= on_date <= end_date:
+                    return discount
+            return None
+
+        # ---------- Bulk historical sessions, bills, payments, refunds ----------
+        now = datetime.now(timezone.utc)
+        session_count = 0
+        completed_sessions_by_station: dict[int, list] = {}
+
+        for info in all_connectors:
+            connector = info["connector"]
+            type_name = info["type_name"]
+            candidates = vehicle_owners_by_type.get(type_name) or []
+            if not candidates:
+                continue
+
+            for _ in range(rng.randint(8, 22)):
+                user, vehicle = rng.choice(candidates)
+                days_ago = rng.uniform(1, 89)
+                start_time = (now - timedelta(days=days_ago)).replace(
+                    hour=rng.randint(6, 22), minute=rng.choice([0, 15, 30, 45]), second=0, microsecond=0
+                )
+                power = connector.max_power_kw
+                if power >= Decimal("100"):
+                    duration_minutes = rng.randint(15, 45)
+                elif power >= Decimal("20"):
+                    duration_minutes = rng.randint(30, 60)
+                else:
+                    duration_minutes = rng.randint(45, 150)
+                end_time = start_time + timedelta(minutes=duration_minutes)
+                full_energy = (power * Decimal(duration_minutes) / Decimal(60)).quantize(Decimal("0.001"))
+
+                status_roll = rng.random()
+                session_status = "completed" if status_roll < 0.93 else "interrupted" if status_roll < 0.98 else "failed"
+                energy = full_energy if session_status == "completed" else (full_energy * Decimal("0.55")).quantize(Decimal("0.001")) if session_status == "interrupted" else None
+
+                booking = None
+                if session_status != "failed" and rng.random() < 0.55:
+                    booking = Booking(
+                        user_id=user.id, vehicle_id=vehicle.id, connector_id=connector.id,
+                        start_time=start_time, end_time=end_time, status="completed",
+                    )
+                    db.add(booking)
+                    db.flush()
+
+                session = ChargingSession(
+                    booking_id=booking.id if booking else None, connector_id=connector.id,
+                    user_id=user.id, vehicle_id=vehicle.id, start_time=start_time,
+                    end_time=end_time if session_status != "failed" else None,
+                    session_status=session_status, energy_delivered_kwh=energy,
+                )
+                db.add(session)
+                db.flush()
+                session_count += 1
+
+                if session_status == "failed":
+                    continue
+
+                completed_sessions_by_station.setdefault(info["station"].id, []).append(session)
+
+                mid_time = start_time + timedelta(minutes=duration_minutes // 2)
+                db.add(MeterReading(
+                    session_id=session.id, timestamp=mid_time, energy_reading_kwh=(energy / 2).quantize(Decimal("0.001")),
+                    power_output_kw=power, voltage=Decimal("400.0"), current=(power * 1000 / 400).quantize(Decimal("0.1")),
+                ))
+                db.add(MeterReading(
+                    session_id=session.id, timestamp=end_time, energy_reading_kwh=energy,
+                    power_output_kw=power, voltage=Decimal("400.0"), current=(power * 1000 / 400).quantize(Decimal("0.1")),
+                ))
+
+                energy_charge = (energy * info["price_per_kwh"]).quantize(Decimal("0.01"))
+                discount_pct = _active_discount(user.id, info["operator"].id, start_time.date())
+                discount = (energy_charge * discount_pct / 100).quantize(Decimal("0.01")) if discount_pct else Decimal("0.00")
+                taxable = energy_charge - discount
+                tax = (taxable * TAX_RATE).quantize(Decimal("0.01"))
+                total = taxable + tax
+
+                bill = Bill(
+                    session_id=session.id, energy_charge=energy_charge, subscription_discount=discount,
+                    tax_amount=tax, total_amount=total, generated_date=end_time,
+                )
+                db.add(bill)
+                db.flush()
+
+                payment_roll = rng.random()
+                payment_status = "successful" if payment_roll < 0.90 else "pending" if payment_roll < 0.97 else "failed"
+                payment = Payment(
+                    bill_id=bill.id, amount=total, payment_date=end_time,
+                    payment_method=rng.choice(["card", "upi", "wallet", "net_banking"]),
+                    payment_status=payment_status, transaction_reference=f"SIM-{session.id:06d}",
+                )
+                db.add(payment)
+                db.flush()
+
+                if payment_status == "successful" and rng.random() < 0.06:
+                    refund_status = rng.choice(["pending", "approved", "rejected"])
+                    db.add(Refund(
+                        payment_id=payment.id, amount=(total * Decimal("0.2")).quantize(Decimal("0.01")),
+                        reason=rng.choice(REFUND_REASONS), status=refund_status,
+                    ))
+                    if refund_status == "approved":
+                        payment.payment_status = "refunded"
+        db.flush()
+
+        # ---------- Reviews ----------
+        for station in stations_by_name.values():
+            reviewers = completed_sessions_by_station.get(station.id, [])
+            reviewer_users = list({s.user_id: s.user for s in reviewers}.values()) if reviewers else []
+            reviewed_already = set()
+            for _ in range(rng.randint(3, 7)):
+                if reviewer_users and rng.random() < 0.8:
+                    user = rng.choice(reviewer_users)
+                    verified = True
+                else:
+                    user = rng.choice(users)
+                    verified = False
+                if user.id in reviewed_already:
+                    continue
+                reviewed_already.add(user.id)
+                rating = rng.choices([5, 4, 3, 2], weights=[45, 35, 15, 5])[0]
+                comment = rng.choice(REVIEW_COMMENTS[rating]) if rng.random() < 0.85 else None
+                db.add(StationReview(
+                    user_id=user.id, station_id=station.id, rating=rating, comment=comment,
+                    review_date=now - timedelta(days=rng.uniform(0, 80)), is_verified=verified,
+                ))
+        db.flush()
+
+        # Keep the original, specific 5-star review used in the walkthrough narrative.
+        mg_road = stations_by_name["Volt Grid - MG Road"]
+        if not db.query(StationReview).filter_by(user_id=demo_user.id, station_id=mg_road.id).first():
+            db.add(StationReview(
+                user_id=demo_user.id, station_id=mg_road.id, rating=5,
+                comment="Fast and reliable, plenty of parking nearby.", is_verified=True,
             ))
 
-            charger_fast = Charger(
-                station_id=station.id, charger_model="ABB Terra 184", power_capacity_kw=Decimal("180.00"),
-                status="active",
-            )
-            charger_slow = Charger(
-                station_id=station.id, charger_model="Delta AC Max", power_capacity_kw=Decimal("22.00"),
-                status="active",
-            )
-            db.add_all([charger_fast, charger_slow])
-            db.flush()
-
-            db.add_all(
-                [
-                    Connector(charger_id=charger_fast.id, connector_type_id=ccs2.id, max_power_kw=Decimal("150.00")),
-                    Connector(charger_id=charger_slow.id, connector_type_id=type2.id, max_power_kw=Decimal("22.00")),
-                ]
-            )
-        db.flush()
-
-        # MG Road enforces opening hours (closed Sundays); Koramangala stations stay unrestricted
-        # (no rows = always open) -- demonstrates both branches of the operating-hours check.
-        for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]:
-            db.add(
-                StationOperatingHours(
-                    station_id=station_mg_road.id, day_of_week=day,
-                    opening_time=time(6, 0), closing_time=time(22, 0),
+        # ---------- Maintenance tickets ----------
+        for operator_key, station_names in [
+            ("volt_grid", [n for n in stations_by_name if n.startswith("Volt Grid")]),
+            ("chargenow", [n for n in stations_by_name if n.startswith("ChargeNow")]),
+        ]:
+            techs = technicians[operator_key]
+            for _ in range(rng.randint(5, 8)):
+                station_name = rng.choice(station_names)
+                station = stations_by_name[station_name]
+                connectors = [c for c in all_connectors if c["station"].id == station.id]
+                if not connectors:
+                    continue
+                connector = rng.choice(connectors)["connector"]
+                status_choice = rng.choices(["open", "in_progress", "completed", "cancelled"], weights=[30, 15, 45, 10])[0]
+                scheduled = (
+                    now - timedelta(days=rng.uniform(1, 60))
+                    if status_choice in ("completed", "cancelled")
+                    else now - timedelta(days=rng.uniform(-5, 10))
                 )
-            )
-
-        basic_plan = ChargingPlan(
-            operator_id=operator.id, plan_name="Basic", subscription_fee=Decimal("199.00"), validity_days=30,
-            discount_percentage=Decimal("5.00"), priority_booking=False, max_sessions=10,
-        )
-        premium_plan = ChargingPlan(
-            operator_id=operator.id, plan_name="Premium", subscription_fee=Decimal("499.00"), validity_days=30,
-            discount_percentage=Decimal("15.00"), priority_booking=True, max_sessions=None,
-        )
-        fleet_plan = ChargingPlan(
-            operator_id=operator.id, plan_name="Fleet", subscription_fee=Decimal("1999.00"), validity_days=90,
-            discount_percentage=Decimal("25.00"), priority_booking=True, max_sessions=None,
-        )
-        db.add_all([basic_plan, premium_plan, fleet_plan])
-        db.flush()
-
-        technician_electrical = Technician(
-            operator_id=operator.id, name="Ravi Kumar", phone="9811111111", specialization="Electrical"
-        )
-        technician_network = Technician(
-            operator_id=operator.id, name="Meena Iyer", phone="9822222222", specialization="Networking"
-        )
-        db.add_all([technician_electrical, technician_network])
-        db.flush()
-
-        demo_user = User(
-            name="Demo Driver",
-            email="driver@example.com",
-            password_hash=hash_password(DEMO_PASSWORD),
-            phone="9900000002",
-            address="221B Residency Road, Bengaluru",
-            account_status="active",
-        )
-        db.add(demo_user)
-        db.flush()
-
-        demo_vehicle = Vehicle(
-            user_id=demo_user.id, model_id=nexon.id, registration_number="KA01AB1234", vehicle_status="active",
-        )
-        db.add(demo_vehicle)
-        db.flush()
-
-        subscription = Subscription(
-            user_id=demo_user.id, plan_id=premium_plan.id,
-            start_date=date.today() - timedelta(days=10), end_date=date.today() + timedelta(days=20),
-            status="active", auto_renew=True,
-        )
-        db.add(subscription)
-        db.flush()
-        db.add(
-            Payment(
-                subscription_id=subscription.id, amount=premium_plan.subscription_fee, payment_method="card",
-                payment_status="successful", transaction_reference="SIM-SEEDSUB01",
-            )
-        )
-
-        # A completed booking -> session -> bill -> payment, so history views aren't empty.
-        past_start = datetime.now(timezone.utc) - timedelta(days=1, hours=2)
-        past_end = past_start + timedelta(hours=1)
-        fast_connector = (
-            db.query(Connector)
-            .join(Charger)
-            .filter(Charger.station_id == station_mg_road.id, Connector.connector_type_id == ccs2.id)
-            .first()
-        )
-
-        past_booking = Booking(
-            user_id=demo_user.id, vehicle_id=demo_vehicle.id, connector_id=fast_connector.id,
-            start_time=past_start, end_time=past_end, status="completed",
-        )
-        db.add(past_booking)
-        db.flush()
-
-        past_session = ChargingSession(
-            booking_id=past_booking.id, connector_id=fast_connector.id, user_id=demo_user.id,
-            vehicle_id=demo_vehicle.id, start_time=past_start, end_time=past_end,
-            session_status="completed", energy_delivered_kwh=Decimal("18.500"),
-        )
-        db.add(past_session)
-        db.flush()
-
-        for minutes, energy, power in [(15, "4.600", 74), (30, "9.200", 73), (45, "13.800", 74), (60, "18.500", 70)]:
-            db.add(
-                MeterReading(
-                    session_id=past_session.id, timestamp=past_start + timedelta(minutes=minutes),
-                    energy_reading_kwh=Decimal(energy), power_output_kw=Decimal(power),
-                    voltage=Decimal("400.0"), current=Decimal(str(round(power * 1000 / 400))),
+                ticket = Maintenance(
+                    station_id=station.id, connector_id=connector.id, technician_id=rng.choice(techs).id,
+                    issue_description=rng.choice([
+                        "Connector reports intermittent power loss",
+                        "Display panel unresponsive",
+                        "Cable latch is loose",
+                        "Scheduled firmware update",
+                        "Reported overheating during fast charge",
+                    ]),
+                    priority=rng.choices(["low", "medium", "high", "critical"], weights=[20, 45, 25, 10])[0],
+                    scheduled_date=scheduled, status=status_choice,
+                    completed_date=scheduled + timedelta(hours=rng.randint(2, 48)) if status_choice == "completed" else None,
                 )
-            )
-
-        # No subscription was active yet when this session ran, so no discount applies.
-        energy_charge = (past_session.energy_delivered_kwh * Decimal("12.50")).quantize(Decimal("0.01"))
-        tax_amount = (energy_charge * Decimal("0.05")).quantize(Decimal("0.01"))
-        past_bill = Bill(
-            session_id=past_session.id, energy_charge=energy_charge, subscription_discount=Decimal("0.00"),
-            tax_amount=tax_amount, total_amount=energy_charge + tax_amount,
-        )
-        db.add(past_bill)
+                db.add(ticket)
+                if status_choice in ("open", "in_progress"):
+                    connector.status = "out_of_service"
         db.flush()
 
-        past_payment = Payment(
-            bill_id=past_bill.id, amount=past_bill.total_amount, payment_method="upi",
-            payment_status="successful", transaction_reference="SIM-SEEDDATA01",
-        )
-        db.add(past_payment)
-        db.flush()
-
-        db.add(Refund(
-            payment_id=past_payment.id, amount=Decimal("20.00"),
-            reason="Charging stopped early due to a connector fault", status="pending",
+        # ---------- Demo-user narrative extras (booking overlap demo, notifications) ----------
+        future_start = now + timedelta(days=1)
+        koramangala_a = stations_by_name["Volt Grid - Koramangala Block A"]
+        slow_connector = next(c["connector"] for c in all_connectors if c["station"].id == koramangala_a.id and c["type_name"] == "Type 2")
+        db.add(Booking(
+            user_id=demo_user.id, vehicle_id=demo_vehicle.id, connector_id=slow_connector.id,
+            start_time=future_start, end_time=future_start + timedelta(hours=2), status="confirmed",
         ))
 
-        db.add(StationReview(
-            user_id=demo_user.id, station_id=station_mg_road.id, rating=5,
-            comment="Fast and reliable, plenty of parking nearby.", is_verified=True,
-        ))
-
-        # An upcoming confirmed booking on a different connector, to demo the booking list.
-        slow_connector = (
-            db.query(Connector)
-            .join(Charger)
-            .filter(Charger.station_id == station_koramangala_a.id, Connector.connector_type_id == type2.id)
-            .first()
-        )
-        future_start = datetime.now(timezone.utc) + timedelta(days=1)
-        db.add(
-            Booking(
-                user_id=demo_user.id, vehicle_id=demo_vehicle.id, connector_id=slow_connector.id,
-                start_time=future_start, end_time=future_start + timedelta(hours=2), status="confirmed",
-            )
-        )
-
-        # An open maintenance ticket, taking a connector at Koramangala Block B out of service.
-        broken_connector = (
-            db.query(Connector)
-            .join(Charger)
-            .filter(Charger.station_id == station_koramangala_b.id, Connector.connector_type_id == ccs2.id)
-            .first()
-        )
-        broken_connector.status = "out_of_service"
-        db.add(Maintenance(
-            station_id=station_koramangala_b.id, connector_id=broken_connector.id,
-            technician_id=technician_electrical.id, issue_description="Connector reports intermittent power loss",
-            priority="high", scheduled_date=datetime.now(timezone.utc) + timedelta(days=1), status="open",
-        ))
-
-        db.add_all(
-            [
-                Notification(user_id=demo_user.id, message="Welcome to Volt Grid! Add a vehicle to get started.", type="System"),
-                Notification(user_id=demo_user.id, message=f"Booking confirmed for connector #{fast_connector.id}", type="Booking", is_read=True),
-                Notification(user_id=demo_user.id, message=f"Session #{past_session.id} ended — bill total ₹{past_bill.total_amount}", type="Payment", is_read=True),
-            ]
-        )
+        db.add_all([
+            Notification(user_id=demo_user.id, message="Welcome to Volt Grid! Add a vehicle to get started.", type="System"),
+            Notification(user_id=demo_user.id, message=f"Booking confirmed for connector #{slow_connector.id}", type="Booking"),
+            Notification(user_id=demo_user.id, message="Your Premium subscription is now active.", type="Promotion", is_read=True),
+        ])
 
         db.commit()
         print("Seed data created.")
+        print(f"  Stations: {len(stations_by_name)} across {len(RTO_CODES)} cities, 2 operators")
+        print(f"  Drivers: {len(users)}, historical sessions: {session_count}")
         print(f"  Driver login:  driver@example.com / {DEMO_PASSWORD}")
-        print(f"  Admin login:   admin@voltgrid.example / {DEMO_PASSWORD}")
+        print(f"  Admin login:   admin@voltgrid.example / {DEMO_PASSWORD}  (Volt Grid Networks)")
+        print(f"  Admin login:   admin@chargenow.example / {DEMO_PASSWORD}  (ChargeNow India)")
     finally:
         db.close()
 

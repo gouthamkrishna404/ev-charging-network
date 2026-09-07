@@ -5,15 +5,18 @@ export function Card({
   children,
   className = "",
   interactive = false,
+  style,
 }: {
   children: ReactNode;
   className?: string;
   interactive?: boolean;
+  style?: React.CSSProperties;
 }) {
   return (
     <div
+      style={style}
       className={`rounded-xl border border-slate-200 bg-white shadow-sm ${
-        interactive ? "transition-all hover:shadow-md hover:border-slate-300" : ""
+        interactive ? "transition-all hover:shadow-md hover:-translate-y-0.5 hover:border-slate-300" : ""
       } ${className}`}
     >
       {children}
@@ -215,6 +218,57 @@ export function Tabs({
         </button>
       ))}
     </div>
+  );
+}
+
+export function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors whitespace-nowrap ${
+        active
+          ? "bg-indigo-600 border-indigo-600 text-white"
+          : "bg-white border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function Switch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none whitespace-nowrap">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${checked ? "bg-indigo-600" : "bg-slate-300"}`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${checked ? "translate-x-4" : ""}`}
+        />
+      </button>
+      {label}
+    </label>
   );
 }
 

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Clock, MessageSquare, Play, Plug, Tag, UserCircle2, Zap } from "lucide-react";
+import { ChevronLeft, Clock, MessageSquare, Play, Plug, Tag, UserCircle2, Zap } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { getRole, isLoggedIn } from "@/lib/auth";
 import { Review, Station, Vehicle, VehicleModel } from "@/lib/types";
@@ -38,7 +39,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   const [endTime, setEndTime] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
-  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isDriver, setIsDriver] = useState(false);
 
   async function load(driverNow: boolean) {
@@ -56,7 +57,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
       const active = v.filter((vehicle) => vehicle.vehicle_status === "active");
       if (active.length > 0) setVehicleId(active[0].id);
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Failed to load this station" });
+      setLoadError(err instanceof ApiError ? err.message : "Failed to load this station");
     }
   }
 
@@ -74,9 +75,8 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   }
 
   async function startWalkIn(connectorId: number) {
-    setMessage(null);
     if (vehicleId === "") {
-      setMessage({ type: "error", text: "Add a vehicle first." });
+      toast.error("Add a vehicle first.");
       return;
     }
     try {
@@ -84,15 +84,15 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
         method: "POST",
         body: JSON.stringify({ connector_id: connectorId, vehicle_id: vehicleId }),
       });
+      toast.success("Session started — plug in and charge.");
       router.push("/bookings");
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function submitBooking(e: React.FormEvent) {
     e.preventDefault();
-    setMessage(null);
     if (vehicleId === "" || bookingConnectorId === null) return;
     try {
       await apiFetch("/bookings", {
@@ -104,26 +104,26 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
           end_time: new Date(endTime).toISOString(),
         }),
       });
-      setMessage({ type: "success", text: "Booking confirmed." });
+      toast.success("Booking confirmed.");
       setBookingConnectorId(null);
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    setMessage(null);
     try {
       await apiFetch(`/stations/${id}/reviews`, {
         method: "POST",
         body: JSON.stringify({ rating: reviewRating, comment: reviewComment || null }),
       });
       setReviewComment("");
+      toast.success("Review posted.");
       const r = await apiFetch<Review[]>(`/stations/${id}/reviews`);
       setReviews(r);
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Something went wrong" });
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
     }
   }
 
@@ -145,13 +145,17 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   const today = DAY_ORDER[(new Date().getDay() + 6) % 7];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
+      <Link href="/stations" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 transition-colors">
+        <ChevronLeft size={15} /> All stations
+      </Link>
+
       <div className="flex items-start gap-4">
         <IconTile icon={Zap} tone="indigo" />
         <div className="flex-1">
           <PageHeader
             title={station.station_name}
-            subtitle={`${station.location.address_line}, ${station.location.city}, ${station.location.state}`}
+            subtitle={`${station.location.address_line}, ${station.location.city}, ${station.location.state} · ${station.operator_name}`}
           />
         </div>
       </div>
@@ -186,7 +190,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
           .
         </Alert>
       )}
-      {message && <Alert type={message.type}>{message.text}</Alert>}
+      {loadError && <Alert type="error">{loadError}</Alert>}
 
       {activeVehicles.length > 1 && (
         <Card className="p-3 max-w-sm">

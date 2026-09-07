@@ -171,6 +171,20 @@ class ChargingStation(Base):
     reviews = relationship("StationReview", back_populates="station")
     maintenance_tickets = relationship("Maintenance", back_populates="station")
 
+    @property
+    def avg_rating(self) -> float | None:
+        if not self.reviews:
+            return None
+        return round(sum(r.rating for r in self.reviews) / len(self.reviews), 2)
+
+    @property
+    def review_count(self) -> int:
+        return len(self.reviews)
+
+    @property
+    def operator_name(self) -> str:
+        return self.operator.operator_name
+
 
 class StationAdmin(Base):
     __tablename__ = "station_admins"

@@ -4,9 +4,32 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
 from app.models import Charger, ChargingSession, ChargingStation, Connector, StationReview, User
-from app.schemas import ReviewCreate, ReviewOut
+from app.schemas import FeaturedReviewOut, ReviewCreate, ReviewOut
 
 router = APIRouter(prefix="/stations", tags=["reviews"])
+
+
+@router.get("/reviews/featured", response_model=list[FeaturedReviewOut])
+def featured_reviews(db: Session = Depends(get_db)):
+    reviews = (
+        db.query(StationReview)
+        .join(ChargingStation, StationReview.station_id == ChargingStation.id)
+        .filter(StationReview.is_verified.is_(True), StationReview.rating >= 4, StationReview.comment.isnot(None))
+        .order_by(StationReview.rating.desc(), StationReview.review_date.desc())
+        .limit(9)
+        .all()
+    )
+    return [
+        FeaturedReviewOut(
+            id=r.id,
+            rating=r.rating,
+            comment=r.comment,
+            station_name=r.station.station_name,
+            city=r.station.location.city,
+            reviewer_name=r.user.name,
+        )
+        for r in reviews
+    ]
 
 
 @router.get("/{station_id}/reviews", response_model=list[ReviewOut])
