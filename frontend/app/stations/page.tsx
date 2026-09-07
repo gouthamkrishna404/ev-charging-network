@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { MapPin, Search, Tag, Zap } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { Station } from "@/lib/types";
 import { Card, EmptyState, IconTile, Input, PageHeader, Skeleton } from "@/components/ui";
+
+const StationsMap = dynamic(() => import("@/components/StationsMap"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[280px] w-full" />,
+});
 
 export default function StationsPage() {
   const [stations, setStations] = useState<Station[] | null>(null);
@@ -28,6 +34,12 @@ export default function StationsPage() {
   return (
     <div>
       <PageHeader title="Charging Stations" subtitle="Find a connector and book or start charging." />
+
+      {stations && stations.length > 0 && (
+        <Card className="mb-6 p-2 overflow-hidden">
+          <StationsMap stations={stations} />
+        </Card>
+      )}
 
       <div className="relative mb-6 max-w-sm">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />

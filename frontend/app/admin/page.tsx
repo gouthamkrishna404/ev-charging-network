@@ -13,6 +13,7 @@ import {
   Plus,
   Power,
   Tag,
+  TrendingUp,
   UserMinus,
   UserPlus,
   Users,
@@ -57,6 +58,7 @@ function AdminContent() {
   const [assignAdminId, setAssignAdminId] = useState<number | "">("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [canManageTeam, setCanManageTeam] = useState(false);
+  const [revenueByStation, setRevenueByStation] = useState<Record<number, Revenue>>({});
 
   const [showNewStation, setShowNewStation] = useState(false);
   const [stationName, setStationName] = useState("");
@@ -89,6 +91,11 @@ function AdminContent() {
       setConnectorTypes(ct);
       setTechnicians(tech);
       setTeam(tm);
+
+      const revenues = await Promise.all(
+        s.map((station) => apiFetch<Revenue>(`/admin/stations/${station.id}/revenue`))
+      );
+      setRevenueByStation(Object.fromEntries(s.map((station, i) => [station.id, revenues[i]])));
     } catch (err) {
       setMessage({ type: "error", text: err instanceof ApiError ? err.message : "Failed to load dashboard data" });
     }
@@ -294,6 +301,49 @@ function AdminContent() {
         }
       />
       {message && <Alert type={message.type}>{message.text}</Alert>}
+
+      {stations.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp size={16} className="text-slate-400" />
+            <p className="text-sm font-semibold text-slate-700">Network overview</p>
+          </div>
+          <div className="flex gap-10 mb-5">
+            <Stat
+              value={`₹${stations.reduce((sum, s) => sum + Number(revenueByStation[s.id]?.total_revenue ?? 0), 0).toFixed(2)}`}
+              label="total revenue"
+            />
+            <Stat
+              value={stations.reduce((sum, s) => sum + (revenueByStation[s.id]?.completed_sessions ?? 0), 0)}
+              label="completed sessions"
+            />
+            <Stat value={stations.length} label="stations" />
+          </div>
+          <ul className="space-y-2.5">
+            {(() => {
+              const maxRevenue = Math.max(...stations.map((s) => Number(revenueByStation[s.id]?.total_revenue ?? 0)), 1);
+              return stations.map((s) => {
+                const rev = Number(revenueByStation[s.id]?.total_revenue ?? 0);
+                const pct = Math.max((rev / maxRevenue) * 100, rev > 0 ? 4 : 0);
+                return (
+                  <li key={s.id} className="flex items-center gap-3 text-sm">
+                    <span className="w-48 sm:w-56 truncate text-slate-600 shrink-0" title={s.station_name}>
+                      {s.station_name}
+                    </span>
+                    <div className="flex-1 h-5 rounded-md bg-slate-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-md bg-gradient-to-r from-indigo-500 to-indigo-400 transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="w-20 text-right font-medium text-slate-900 shrink-0">₹{rev.toFixed(0)}</span>
+                  </li>
+                );
+              });
+            })()}
+          </ul>
+        </Card>
+      )}
 
       {showNewStation && (
         <Card className="p-5">
