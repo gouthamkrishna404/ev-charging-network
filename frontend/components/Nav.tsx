@@ -53,7 +53,7 @@ export default function Nav() {
     <>
       <nav
         className={`relative sticky top-0 z-20 transition-colors duration-300 ${
-          scrolled ? "border-b border-white/[0.08] bg-white/[0.03] backdrop-blur-xl" : "border-b border-transparent"
+          scrolled ? "border-b border-white/[0.08] bg-[#0a0912]/90 backdrop-blur-xl" : "border-b border-transparent"
         }`}
       >
         <div

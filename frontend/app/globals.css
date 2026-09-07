@@ -200,6 +200,11 @@ body {
    which would otherwise let its white default win the tie on specificity. */
 .leaflet-popup-content-wrapper {
   border-radius: 14px;
+  /* Clips the "View station" button's own corners to this wrapper's radius --
+     without it the button's square top edge (only its bottom is rounded)
+     peeked past the wrapper's rounded outline, reading as a mismatched
+     button shape rather than one continuous rounded card. */
+  overflow: hidden;
   background: #100f1c !important;
   color: #e2e8f0 !important;
   box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(129, 140, 248, 0.12);
@@ -208,6 +213,13 @@ body {
 .leaflet-popup-content {
   margin: 0;
   width: auto !important;
+}
+/* `.leaflet-container a { color: #0078A8 }` is Leaflet's own default link
+   color -- a class+tag selector, so it beats a single Tailwind utility class
+   like text-white on specificity regardless of source order. That's what
+   turned the popup's "View station" button text teal instead of white. */
+.leaflet-popup-content-wrapper a {
+  color: #fff !important;
 }
 .leaflet-popup-tip {
   background: #100f1c !important;
