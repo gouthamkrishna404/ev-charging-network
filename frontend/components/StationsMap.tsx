@@ -162,45 +162,55 @@ function FitBounds({
 }) {
   const map = useMap();
   useEffect(() => {
-    // Every fitBounds/setView call below is the map moving itself, not the driver --
-    // flag it so the viewport listener doesn't mistake it for a manual pan and pop up
-    // a "Search this area" button for a move nobody actually made.
-    programmaticMoveRef.current = true;
-    // Once we know where the driver is, focus the map on them and whatever's actually
-    // nearby -- fitting bounds to the entire (possibly nationwide) station list would
-    // zoom back out and bury their location marker among every other pin on the map.
-    if (userLocation) {
-      const nearby = stations
-        .filter((s) => s.location.latitude && s.location.longitude)
-        .map((s): [number, number] => [Number(s.location.latitude), Number(s.location.longitude)])
-        .filter(([lat, lng]) => haversineKm(userLocation.lat, userLocation.lng, lat, lng) <= NEARBY_RADIUS_KM)
-        .sort(
-          (a, b) =>
-            haversineKm(userLocation.lat, userLocation.lng, a[0], a[1]) -
-            haversineKm(userLocation.lat, userLocation.lng, b[0], b[1])
-        )
-        .slice(0, 8);
+    // Deferred one frame: when userLocation and the station list change in the same
+    // batch (the silent auto-locate on the stations page does exactly this), this
+    // effect and ClusterLayer's clearLayers()+re-add both fire together. Calling
+    // fitBounds while the cluster group's internal tree is mid-rebuild is what threw
+    // "Cannot use 'in' operator to search for '_leaflet_id' in undefined" -- a real
+    // leaflet.markercluster race, not a one-off. Waiting a frame lets the marker
+    // rebuild finish first.
+    const raf = requestAnimationFrame(() => {
+      // Every fitBounds/setView call below is the map moving itself, not the driver --
+      // flag it so the viewport listener doesn't mistake it for a manual pan and pop up
+      // a "Search this area" button for a move nobody actually made.
+      programmaticMoveRef.current = true;
+      // Once we know where the driver is, focus the map on them and whatever's actually
+      // nearby -- fitting bounds to the entire (possibly nationwide) station list would
+      // zoom back out and bury their location marker among every other pin on the map.
+      if (userLocation) {
+        const nearby = stations
+          .filter((s) => s.location.latitude && s.location.longitude)
+          .map((s): [number, number] => [Number(s.location.latitude), Number(s.location.longitude)])
+          .filter(([lat, lng]) => haversineKm(userLocation.lat, userLocation.lng, lat, lng) <= NEARBY_RADIUS_KM)
+          .sort(
+            (a, b) =>
+              haversineKm(userLocation.lat, userLocation.lng, a[0], a[1]) -
+              haversineKm(userLocation.lat, userLocation.lng, b[0], b[1])
+          )
+          .slice(0, 8);
 
-      if (nearby.length === 0) {
-        map.setView([userLocation.lat, userLocation.lng], 12);
-      } else {
-        map.fitBounds(L.latLngBounds([[userLocation.lat, userLocation.lng], ...nearby]), {
-          padding: [40, 40],
-          maxZoom: 14,
-        });
+        if (nearby.length === 0) {
+          map.setView([userLocation.lat, userLocation.lng], 12);
+        } else {
+          map.fitBounds(L.latLngBounds([[userLocation.lat, userLocation.lng], ...nearby]), {
+            padding: [40, 40],
+            maxZoom: 14,
+          });
+        }
+        return;
       }
-      return;
-    }
 
-    const points: [number, number][] = stations
-      .filter((s) => s.location.latitude && s.location.longitude)
-      .map((s) => [Number(s.location.latitude), Number(s.location.longitude)]);
-    if (points.length === 0) return;
-    if (points.length === 1) {
-      map.setView(points[0], 13);
-      return;
-    }
-    map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 14 });
+      const points: [number, number][] = stations
+        .filter((s) => s.location.latitude && s.location.longitude)
+        .map((s) => [Number(s.location.latitude), Number(s.location.longitude)]);
+      if (points.length === 0) return;
+      if (points.length === 1) {
+        map.setView(points[0], 13);
+        return;
+      }
+      map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 14 });
+    });
+    return () => cancelAnimationFrame(raf);
   }, [map, stations, userLocation, programmaticMoveRef]);
   return null;
 }
