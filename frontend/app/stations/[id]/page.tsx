@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ChevronLeft, Clock, MessageSquare, Play, Plug, Tag, UserCircle2, Zap } from "lucide-react";
@@ -24,6 +25,8 @@ import {
   Skeleton,
   StarRating,
 } from "@/components/ui";
+
+const StationsMap = dynamic(() => import("@/components/StationsMap"), { ssr: false });
 
 function toLocalInputValue(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -197,28 +200,51 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
         <ChevronLeft size={15} /> All stations
       </Link>
 
-      <div className="flex items-start gap-4">
+      <div className="flex flex-wrap items-start gap-4">
         <IconTile icon={Zap} tone="indigo" />
-        <div className="flex-1">
+        <div className="flex-1 min-w-[220px]">
           <PageHeader
             title={station.station_name}
             subtitle={`${station.location.address_line}, ${station.location.city}, ${station.location.state} · ${station.operator_name}`}
           />
+          <div className="flex flex-wrap gap-4 -mt-4">
+            {station.tariff && (
+              <span className="flex items-center gap-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1">
+                <Tag size={13} className="text-slate-400" />₹{station.tariff.price_per_kwh} / kWh
+              </span>
+            )}
+            {avgRating !== null && (
+              <span className="flex items-center gap-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1">
+                <StarRating rating={Math.round(avgRating)} /> {avgRating.toFixed(1)} ({reviews.length})
+              </span>
+            )}
+          </div>
         </div>
+        {station.location.latitude && station.location.longitude && (
+          <Card className="w-full sm:w-48 h-32 overflow-hidden p-0 shrink-0">
+            <StationsMap stations={[station]} interactive={false} height="100%" />
+          </Card>
+        )}
       </div>
 
-      <div className="flex flex-wrap gap-4 -mt-4">
-        {station.tariff && (
-          <span className="flex items-center gap-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1">
-            <Tag size={13} className="text-slate-400" />₹{station.tariff.price_per_kwh} / kWh
-          </span>
-        )}
-        {avgRating !== null && (
-          <span className="flex items-center gap-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1">
-            <StarRating rating={Math.round(avgRating)} /> {avgRating.toFixed(1)} ({reviews.length})
-          </span>
-        )}
-      </div>
+      {isDriver && activeVehicles.length > 0 && bestConnector && (
+        <div className="hidden sm:flex relative rounded-2xl overflow-hidden bg-slate-950 text-white items-center gap-4 p-5">
+          <div aria-hidden className="absolute inset-0 bg-mesh-hero" />
+          <div className="relative flex-1 min-w-0">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase text-volt-400 bg-white/5 ring-1 ring-white/10 rounded-full px-2.5 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-volt-400 animate-pulse-ring" />
+              Ready to charge
+            </span>
+            <p className="font-display text-lg font-semibold mt-2">
+              {bestConnector.connector_type_name} available now{selectedModel ? ` for your ${selectedModel.make} ${selectedModel.model_name}` : ""}
+            </p>
+            <p className="text-sm text-slate-400 mt-0.5">{bestConnector.max_power_kw} kW · no booking needed, plug in whenever you arrive</p>
+          </div>
+          <Button size="lg" className="relative shrink-0" onClick={() => startWalkIn(bestConnector.id)}>
+            <Play size={14} /> Start now
+          </Button>
+        </div>
+      )}
 
       {!isDriver && (
         <Alert type="error">
@@ -334,75 +360,79 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
         ))}
       </div>
 
-      {sortedHours.length > 0 && (
-        <Card className="p-4">
+      <SectionHeading icon={MessageSquare} title="More about this station" />
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 items-start">
+        {sortedHours.length > 0 && (
+          <Card className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={15} className="text-slate-400" />
+              <p className="font-medium text-sm text-slate-900">Operating Hours</p>
+            </div>
+            <ul className="text-sm text-slate-600 grid grid-cols-2 lg:grid-cols-1 gap-2">
+              {sortedHours.map((h) => (
+                <li
+                  key={h.id}
+                  className={`rounded-lg px-2 py-1 flex items-center justify-between gap-2 ${h.day_of_week === today ? "bg-indigo-50 text-indigo-700 font-medium" : ""}`}
+                >
+                  <span>{h.day_of_week.slice(0, 3)}</span>
+                  <span className="tabular-nums">{h.opening_time.slice(0, 5)}–{h.closing_time.slice(0, 5)}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+
+        <Card className={`p-4 ${sortedHours.length === 0 ? "lg:col-span-2" : ""}`}>
           <div className="flex items-center gap-2 mb-3">
-            <Clock size={15} className="text-slate-400" />
-            <p className="font-medium text-sm text-slate-900">Operating Hours</p>
+            <MessageSquare size={15} className="text-slate-400" />
+            <p className="font-medium text-sm text-slate-900">Reviews</p>
           </div>
-          <ul className="text-sm text-slate-600 grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {sortedHours.map((h) => (
-              <li
-                key={h.id}
-                className={`rounded-lg px-2 py-1 ${h.day_of_week === today ? "bg-indigo-50 text-indigo-700 font-medium" : ""}`}
-              >
-                {h.day_of_week.slice(0, 3)}: {h.opening_time.slice(0, 5)}–{h.closing_time.slice(0, 5)}
+          <ul className="space-y-3 mb-4">
+            {reviews.map((r) => (
+              <li key={r.id} className="flex gap-3 text-sm border-b border-slate-100 pb-3 last:border-0">
+                <UserCircle2 size={28} className="text-slate-300 shrink-0" strokeWidth={1.5} />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <StarRating rating={r.rating} />
+                    {r.is_verified && <span className="text-xs text-emerald-700 font-medium">Verified visit</span>}
+                  </div>
+                  {r.comment && <p className="text-slate-600 mt-0.5">{r.comment}</p>}
+                </div>
               </li>
             ))}
+            {reviews.length === 0 && <EmptyState icon={MessageSquare}>No reviews yet.</EmptyState>}
           </ul>
+          {isDriver ? (
+            <form onSubmit={submitReview} className="flex flex-wrap items-end gap-2">
+              <Field label="Rating">
+                <Select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))}>
+                  {[5, 4, 3, 2, 1].map((n) => (
+                    <option key={n} value={n}>
+                      {n} star{n > 1 ? "s" : ""}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Input
+                placeholder="Optional comment"
+                className="flex-1 min-w-[180px]"
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+              />
+              <Button type="submit" variant="secondary">
+                Post review
+              </Button>
+            </form>
+          ) : (
+            <p className="text-sm text-slate-500">
+              <Link href="/login" className="underline">
+                Log in as a driver
+              </Link>{" "}
+              to leave a review.
+            </p>
+          )}
         </Card>
-      )}
-
-      <Card className="p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <MessageSquare size={15} className="text-slate-400" />
-          <p className="font-medium text-sm text-slate-900">Reviews</p>
-        </div>
-        <ul className="space-y-3 mb-4">
-          {reviews.map((r) => (
-            <li key={r.id} className="flex gap-3 text-sm border-b border-slate-100 pb-3 last:border-0">
-              <UserCircle2 size={28} className="text-slate-300 shrink-0" strokeWidth={1.5} />
-              <div>
-                <div className="flex items-center gap-2">
-                  <StarRating rating={r.rating} />
-                  {r.is_verified && <span className="text-xs text-emerald-700 font-medium">Verified visit</span>}
-                </div>
-                {r.comment && <p className="text-slate-600 mt-0.5">{r.comment}</p>}
-              </div>
-            </li>
-          ))}
-          {reviews.length === 0 && <EmptyState icon={MessageSquare}>No reviews yet.</EmptyState>}
-        </ul>
-        {isDriver ? (
-          <form onSubmit={submitReview} className="flex flex-wrap items-end gap-2">
-            <Field label="Rating">
-              <Select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))}>
-                {[5, 4, 3, 2, 1].map((n) => (
-                  <option key={n} value={n}>
-                    {n} star{n > 1 ? "s" : ""}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Input
-              placeholder="Optional comment"
-              className="flex-1 min-w-[180px]"
-              value={reviewComment}
-              onChange={(e) => setReviewComment(e.target.value)}
-            />
-            <Button type="submit" variant="secondary">
-              Post review
-            </Button>
-          </form>
-        ) : (
-          <p className="text-sm text-slate-500">
-            <Link href="/login" className="underline">
-              Log in as a driver
-            </Link>{" "}
-            to leave a review.
-          </p>
-        )}
-      </Card>
+      </div>
 
       {/* Mobile-only sticky action bar -- the fastest path to charging shouldn't require
           scrolling past hours/reviews to find the Start button on a phone. Sits above the
