@@ -231,14 +231,22 @@ function SelectionSync({
   const map = useMap();
   useEffect(() => {
     if (selectedId === null) return;
-    const marker = markersRef.current.get(selectedId);
-    const group = groupRef.current;
-    programmaticMoveRef.current = true;
-    if (!marker || !group) return;
-    group.zoomToShowLayer(marker, () => {
-      map.panTo(marker.getLatLng(), { animate: true });
-      marker.openPopup();
+    // Deferred one frame for the same reason as FitBounds below: selecting a station
+    // (hover on desktop, tap on mobile) can land in the same commit as a stations-list
+    // change, which is when ClusterLayer is mid clearLayers()+re-add. Calling into
+    // leaflet.markercluster while that's in flight is what threw "Cannot use 'in'
+    // operator to search for '_leaflet_id' in undefined" here too.
+    const raf = requestAnimationFrame(() => {
+      const marker = markersRef.current.get(selectedId);
+      const group = groupRef.current;
+      programmaticMoveRef.current = true;
+      if (!marker || !group) return;
+      group.zoomToShowLayer(marker, () => {
+        map.panTo(marker.getLatLng(), { animate: true });
+        marker.openPopup();
+      });
     });
+    return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
   return null;
@@ -303,6 +311,7 @@ export default function StationsMap({
     <MapContainer
       center={center}
       zoom={5}
+      maxZoom={19}
       scrollWheelZoom={interactive}
       zoomControl={interactive}
       dragging={interactive}
@@ -315,6 +324,7 @@ export default function StationsMap({
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        maxZoom={19}
       />
       <ClusterLayer stations={withCoords} userLocation={userLocation} onSelect={onSelect} markersRef={markersRef} groupRef={groupRef} />
       <FitBounds stations={withCoords} userLocation={userLocation} programmaticMoveRef={programmaticMoveRef} />
