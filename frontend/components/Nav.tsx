@@ -40,8 +40,12 @@ export default function Nav() {
 
   return (
     <>
-      <nav className="border-b border-white/[0.07] bg-[#0a0912]/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4">
+      <nav className="relative border-b border-white/[0.08] bg-white/[0.03] backdrop-blur-xl sticky top-0 z-20">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-r from-indigo-500/[0.07] via-transparent to-volt-500/[0.06] pointer-events-none"
+        />
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 font-display font-semibold text-slate-100 whitespace-nowrap">
             <LogoMark size={26} />
             Voltaic

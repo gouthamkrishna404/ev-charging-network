@@ -152,11 +152,18 @@ body {
 
 /* Decorative radial mesh used behind premium/hero surfaces. Kept as a utility
    class (rather than inline styles) so the gradient stops stay consistent
-   everywhere it's reused. */
+   everywhere it's reused. Masked to fade out before it reaches the box edge --
+   on a short section (e.g. the final CTA band) the gradient's own falloff
+   hasn't reached transparent by the time `overflow-hidden` clips it, which
+   reads as a hard rectangular seam against the canvas around it. Fixed-pixel
+   (not percentage) stops so the fade band is the same size regardless of how
+   tall or wide the section using it is. */
 .bg-mesh-hero {
   background-image:
     radial-gradient(ellipse 60% 50% at 20% 0%, color-mix(in srgb, var(--color-indigo-500) 35%, transparent), transparent),
     radial-gradient(ellipse 50% 40% at 90% 20%, color-mix(in srgb, var(--color-volt-500) 25%, transparent), transparent);
+  mask-image: linear-gradient(to bottom, transparent 0, black 48px, black calc(100% - 48px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 48px, black calc(100% - 48px), transparent 100%);
 }
 
 .bg-dot-grid {
