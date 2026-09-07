@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, Check, Globe, X, Zap } from "lucide-react";
+import { Check, Globe, X, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { ChargingPlan, Subscription } from "@/lib/types";
@@ -68,7 +68,7 @@ function PlansContent() {
   if (plans === null) {
     return (
       <div className="space-y-8">
-        <PageHeader title="Charging Plans" subtitle="Loading plans…" />
+        <PageHeader title="Volt Grid Membership" subtitle="Loading plans…" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[...Array(3)].map((_, i) => (
             <Skeleton key={i} className="h-64" />
@@ -85,12 +85,12 @@ function PlansContent() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Charging Plans"
-        subtitle="One subscription, network-wide. Whichever plan you pick, its discount applies at every operator's stations — not just the one that sold it. Only one plan can be active at a time."
+        title="Volt Grid Membership"
+        subtitle="A single platform-wide membership, not any one operator's product. Pick a tier and its discount applies at every station on the network. Only one membership can be active at a time."
       />
 
       <div className="flex items-center gap-2 text-xs font-medium text-indigo-600 bg-indigo-50 ring-1 ring-indigo-100 rounded-full px-3 py-1.5 w-fit">
-        <Globe size={13} /> Every plan below works at every station, from every operator
+        <Globe size={13} /> Membership works everywhere — it isn&apos;t tied to whichever station sold it
       </div>
 
       {activeSubscription && (
@@ -119,9 +119,6 @@ function PlansContent() {
                   Best value
                 </span>
               )}
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
-                <Building2 size={12} /> {plan.operator_name}
-              </div>
               <p className="font-semibold text-slate-900">{plan.plan_name}</p>
               <p className="text-2xl font-semibold mt-2 text-slate-900">
                 ₹{plan.subscription_fee}
