@@ -18,7 +18,7 @@ export default function MobileTabBar({ links }: { links: NavLink[] }) {
   return (
     <>
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-sm border-t border-slate-200"
+        className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-sm border-t border-indigo-100"
         style={{ paddingBottom: "var(--safe-bottom)" }}
       >
         <div className="grid" style={{ gridTemplateColumns: `repeat(${primary.length + (overflow.length > 0 ? 1 : 0)}, 1fr)` }}>

@@ -17,9 +17,9 @@ export function Card({
   return (
     <div
       style={style}
-      className={`rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_1px_1px_rgba(15,23,42,0.03)] ${
+      className={`rounded-2xl border border-indigo-950/[0.06] bg-white shadow-[0_1px_2px_rgba(67,56,202,0.05),0_1px_1px_rgba(67,56,202,0.04)] ${
         interactive
-          ? "transition-all duration-200 hover:shadow-[0_12px_24px_-8px_rgba(15,23,42,0.12)] hover:-translate-y-0.5 hover:border-slate-300 cursor-pointer active:translate-y-0 active:shadow-sm"
+          ? "transition-all duration-200 hover:shadow-[0_16px_28px_-10px_rgba(67,56,202,0.18)] hover:-translate-y-0.5 hover:border-indigo-200 cursor-pointer active:translate-y-0 active:shadow-sm"
           : ""
       } ${className}`}
     >

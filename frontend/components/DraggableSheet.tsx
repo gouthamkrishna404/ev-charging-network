@@ -74,7 +74,7 @@ export default function DraggableSheet({
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-30 bg-white rounded-t-2xl shadow-[0_-8px_30px_rgba(15,23,42,0.15)] flex flex-col md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 bg-white rounded-t-2xl shadow-[0_-8px_30px_rgba(67,56,202,0.16)] flex flex-col md:hidden"
       style={{
         height: `${heightPx}px`,
         marginBottom: "calc(64px + var(--safe-bottom))",

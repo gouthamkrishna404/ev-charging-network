@@ -5,7 +5,7 @@ const TECH = ["Next.js", "FastAPI", "PostgreSQL", "SQLAlchemy"];
 
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-white mt-16">
+    <footer className="border-t border-indigo-100 mt-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-1.5 font-display font-semibold text-slate-900">
           <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">

@@ -19,6 +19,21 @@ body {
   font-feature-settings: "cv11", "ss01";
 }
 
+/* The app's light canvas -- replaces a flat slate-50 fill. A warm off-white base
+   with the same indigo/volt hues used in the dark hero sections washed very
+   faintly into the corners, fixed to the viewport so it reads as one continuous
+   surface behind every page (including the empty margins beside a centered
+   layout on wide screens) rather than a color that resets at each section. */
+.bg-canvas {
+  background-color: #f9f9fc;
+  background-image:
+    radial-gradient(1100px 620px at -5% -10%, color-mix(in srgb, var(--color-indigo-500) 8%, transparent), transparent 60%),
+    radial-gradient(900px 560px at 105% 0%, color-mix(in srgb, var(--color-volt-500) 7%, transparent), transparent 60%),
+    radial-gradient(1000px 640px at 100% 100%, color-mix(in srgb, var(--color-indigo-500) 6%, transparent), transparent 60%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
 /* Tabular numbers for anything showing live/shifting figures -- keeps digit
    widths stable so stat cards and live counters don't jitter as they update. */
 .tabular-nums {
