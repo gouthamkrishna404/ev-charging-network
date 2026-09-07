@@ -54,6 +54,17 @@ body {
   margin-right: calc(50% - 50vw);
 }
 
+/* Same escape, for a decorative layer that also needs position: absolute
+   (e.g. stretched with inset-y-0 to match its parent's full height). Mixing
+   .full-bleed's width/margin trick with inset-0 over-constrains left/right/
+   width/margin all at once -- center-then-shift instead. */
+.full-bleed-absolute {
+  position: absolute;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+}
+
 /* Slim, dark-appropriate scrollbar so the browser chrome doesn't clash with
    the rest of the theme (WebKit/Blink only; Firefox falls back to its own
    dark-aware default, which is fine). */
@@ -175,6 +186,27 @@ body {
     radial-gradient(ellipse 50% 100% at 62% 50%, color-mix(in srgb, var(--color-violet-500) 16%, transparent), transparent 75%);
   mask-image: linear-gradient(to bottom, transparent 0, black 48px, black calc(100% - 48px), transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 48px, black calc(100% - 48px), transparent 100%);
+}
+
+/* Runs the full height of the landing page, behind every section, so the
+   page reads as one continuous flow instead of colorful hero/CTA bands
+   bookending a stretch of flat black in between -- the corner glows in
+   bg-canvas fade out long before reaching the middle of a page this tall.
+   Percentage stops, so it stretches to whatever the page's actual content
+   height turns out to be rather than a fixed pixel span. */
+.bg-landing-flow {
+  /* No stop drops all the way to transparent -- a dip back to zero recreates
+     the exact flat-black dead zone this is meant to fix, just shifted
+     further down the page. Always at least a faint tint, rising toward the
+     hero/CTA ends. */
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-indigo-600) 16%, transparent) 0%,
+    color-mix(in srgb, var(--color-indigo-500) 10%, transparent) 20%,
+    color-mix(in srgb, var(--color-violet-600) 11%, transparent) 50%,
+    color-mix(in srgb, var(--color-violet-500) 10%, transparent) 78%,
+    color-mix(in srgb, var(--color-indigo-500) 16%, transparent) 100%
+  );
 }
 
 .bg-dot-grid {

@@ -109,7 +109,13 @@ export default function Home() {
   }, [tickerFacts.length]);
 
   return (
-    <div className="space-y-24 pb-12">
+    <div className="relative space-y-24 pb-12">
+      {/* Ties every section together into one continuous page instead of
+          colorful hero/CTA bands bookending flat black in between -- see
+          bg-landing-flow in globals.css. Sits behind all section content;
+          the hero/CTA's own mesh overlays layer on top of it as accents. */}
+      <div aria-hidden className="full-bleed-absolute inset-y-0 -z-10 bg-landing-flow" />
+
       {/* Hero */}
       <section className="full-bleed relative px-4 sm:px-6 pt-14 pb-16 overflow-hidden text-white -mt-8">
         <div aria-hidden className="absolute inset-0 bg-mesh-hero" />
@@ -176,14 +182,14 @@ export default function Home() {
                 <StationsMap stations={stations} interactive={false} height="100%" />
               )}
             </div>
-            <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-white/95 backdrop-blur rounded-full pl-2.5 pr-3 py-1.5 shadow-lg">
+            <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-slate-950/90 backdrop-blur ring-1 ring-white/10 rounded-full pl-2.5 pr-3 py-1.5 shadow-lg">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-ring" />
-              <span className="text-xs font-semibold text-slate-300">{stats ? `${stats.available} available now` : "Loading…"}</span>
+              <span className="text-xs font-semibold text-slate-100">{stats ? `${stats.available} available now` : "Loading…"}</span>
             </div>
             {stats?.avgRating && (
-              <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-white/95 backdrop-blur rounded-full px-3 py-1.5 shadow-lg">
-                <Star size={12} className="text-amber-500" fill="currentColor" />
-                <span className="text-xs font-semibold text-slate-300">{stats.avgRating.toFixed(1)} avg rating</span>
+              <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-slate-950/90 backdrop-blur ring-1 ring-white/10 rounded-full px-3 py-1.5 shadow-lg">
+                <Star size={12} className="text-amber-400" fill="currentColor" />
+                <span className="text-xs font-semibold text-slate-100">{stats.avgRating.toFixed(1)} avg rating</span>
               </div>
             )}
           </div>
