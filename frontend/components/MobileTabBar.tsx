@@ -18,7 +18,7 @@ export default function MobileTabBar({ links }: { links: NavLink[] }) {
   return (
     <>
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-sm border-t border-indigo-100"
+        className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[#0a0912]/90 backdrop-blur-md border-t border-white/[0.07]"
         style={{ paddingBottom: "var(--safe-bottom)" }}
       >
         <div className="grid" style={{ gridTemplateColumns: `repeat(${primary.length + (overflow.length > 0 ? 1 : 0)}, 1fr)` }}>
@@ -33,9 +33,9 @@ export default function MobileTabBar({ links }: { links: NavLink[] }) {
                 <link.icon
                   size={20}
                   strokeWidth={active ? 2.4 : 2}
-                  className={active ? "text-indigo-600" : "text-slate-400"}
+                  className={active ? "text-indigo-400" : "text-slate-500"}
                 />
-                <span className={active ? "text-indigo-600" : "text-slate-500"}>{link.label}</span>
+                <span className={active ? "text-indigo-400" : "text-slate-500"}>{link.label}</span>
               </Link>
             );
           })}
@@ -44,8 +44,8 @@ export default function MobileTabBar({ links }: { links: NavLink[] }) {
               onClick={() => setMoreOpen(true)}
               className="flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium"
             >
-              <MoreHorizontal size={20} strokeWidth={overflowActive ? 2.4 : 2} className={overflowActive ? "text-indigo-600" : "text-slate-400"} />
-              <span className={overflowActive ? "text-indigo-600" : "text-slate-500"}>More</span>
+              <MoreHorizontal size={20} strokeWidth={overflowActive ? 2.4 : 2} className={overflowActive ? "text-indigo-400" : "text-slate-500"} />
+              <span className={overflowActive ? "text-indigo-400" : "text-slate-500"}>More</span>
             </button>
           )}
         </div>
@@ -61,7 +61,7 @@ export default function MobileTabBar({ links }: { links: NavLink[] }) {
                 href={link.href}
                 onClick={() => setMoreOpen(false)}
                 className={`flex flex-col items-center justify-center gap-1.5 rounded-xl py-4 text-xs font-medium ${
-                  active ? "bg-indigo-50 text-indigo-700" : "bg-slate-50 text-slate-600"
+                  active ? "bg-indigo-500/15 text-indigo-300" : "bg-white/[0.05] text-slate-300"
                 }`}
               >
                 <link.icon size={20} strokeWidth={active ? 2.4 : 2} />

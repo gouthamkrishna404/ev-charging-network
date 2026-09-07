@@ -68,7 +68,7 @@ function AdminAnalyticsContent() {
           </div>
 
           <Card className="p-5">
-            <p className="text-sm font-semibold text-slate-700 mb-4">Revenue trend</p>
+            <p className="text-sm font-semibold text-slate-300 mb-4">Revenue trend</p>
             {dailyChart.length === 0 ? (
               <p className="text-sm text-slate-400 py-10 text-center">No billed sessions in this window yet.</p>
             ) : (
@@ -80,7 +80,7 @@ function AdminAnalyticsContent() {
                       <stop offset="100%" stopColor="#4f46e5" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.08)" />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={48} />
                   <Tooltip
@@ -88,7 +88,7 @@ function AdminAnalyticsContent() {
                       name === "revenue" ? `₹${Number(value).toFixed(2)}` : String(value),
                       name === "revenue" ? "Revenue" : "Sessions",
                     ]}
-                    contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
+                    contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", fontSize: 12, background: "#15131f", color: "#e2e8f0" }}
                   />
                   <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={2} fill="url(#revenueFill)" />
                 </AreaChart>
@@ -98,23 +98,23 @@ function AdminAnalyticsContent() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Card className="p-5">
-              <p className="text-sm font-semibold text-slate-700 mb-4">Revenue by station</p>
+              <p className="text-sm font-semibold text-slate-300 mb-4">Revenue by station</p>
               {data.by_station.length === 0 ? (
                 <p className="text-sm text-slate-400 py-10 text-center">No data yet.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={Math.max(200, data.by_station.length * 34)}>
                   <BarChart data={data.by_station} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.08)" />
                     <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                     <YAxis
                       dataKey="station_name"
                       type="category"
                       width={150}
-                      tick={{ fontSize: 11, fill: "#475569" }}
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
                       axisLine={false}
                       tickLine={false}
                     />
-                    <Tooltip formatter={(value) => [`₹${Number(value).toFixed(2)}`, "Revenue"]} contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                    <Tooltip formatter={(value) => [`₹${Number(value).toFixed(2)}`, "Revenue"]} contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", fontSize: 12, background: "#15131f", color: "#e2e8f0" }} />
                     <Bar dataKey="revenue" fill="#4f46e5" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -122,16 +122,16 @@ function AdminAnalyticsContent() {
             </Card>
 
             <Card className="p-5">
-              <p className="text-sm font-semibold text-slate-700 mb-4">Sessions by connector type</p>
+              <p className="text-sm font-semibold text-slate-300 mb-4">Sessions by connector type</p>
               {data.by_connector_type.length === 0 ? (
                 <p className="text-sm text-slate-400 py-10 text-center">No completed sessions yet.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={data.by_connector_type} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.08)" />
                     <XAxis dataKey="type_name" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={32} />
-                    <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                    <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", fontSize: 12, background: "#15131f", color: "#e2e8f0" }} />
                     <Bar dataKey="sessions" radius={[4, 4, 0, 0]}>
                       {data.by_connector_type.map((_, i) => (
                         <Cell key={i} fill={CONNECTOR_COLORS[i % CONNECTOR_COLORS.length]} />

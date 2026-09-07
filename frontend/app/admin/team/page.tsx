@@ -88,7 +88,7 @@ function TeamContent() {
 
       {canManage ? (
         <Card className="p-5 max-w-md">
-          <h2 className="font-medium text-sm text-slate-900 mb-3">Add a team member</h2>
+          <h2 className="font-medium text-sm text-slate-100 mb-3">Add a team member</h2>
           <form onSubmit={addMember} className="space-y-3">
             <Field label="Full name">
               <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} required />

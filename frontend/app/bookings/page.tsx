@@ -147,30 +147,30 @@ function BookingsContent() {
         {completedBill && (
           <div className="space-y-4">
             <div className="flex flex-col items-center text-center py-2">
-              <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
-                <CheckCircle2 size={26} className="text-emerald-600" />
+              <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center mb-3">
+                <CheckCircle2 size={26} className="text-emerald-400" />
               </div>
-              <p className="font-display text-2xl font-semibold text-slate-900 tabular-nums">₹{completedBill.total_amount}</p>
+              <p className="font-display text-2xl font-semibold text-slate-100 tabular-nums">₹{completedBill.total_amount}</p>
               <p className="text-sm text-slate-500 mt-1">
                 {completedBill.station_name} · {completedBill.connector_type_name}
               </p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-4 space-y-1.5 text-sm">
-              <div className="flex justify-between text-slate-600">
+            <div className="rounded-xl bg-white/[0.05] p-4 space-y-1.5 text-sm">
+              <div className="flex justify-between text-slate-400">
                 <span>Energy</span>
                 <span>₹{completedBill.energy_charge}</span>
               </div>
               {Number(completedBill.subscription_discount) > 0 && (
-                <div className="flex justify-between text-emerald-700">
+                <div className="flex justify-between text-emerald-400">
                   <span>Subscription discount</span>
                   <span>−₹{completedBill.subscription_discount}</span>
                 </div>
               )}
-              <div className="flex justify-between text-slate-600">
+              <div className="flex justify-between text-slate-400">
                 <span>Tax</span>
                 <span>₹{completedBill.tax_amount}</span>
               </div>
-              <div className="flex justify-between font-semibold text-slate-900 pt-1.5 border-t border-slate-200">
+              <div className="flex justify-between font-semibold text-slate-100 pt-1.5 border-t border-white/10">
                 <span>Total</span>
                 <span>₹{completedBill.total_amount}</span>
               </div>
@@ -198,7 +198,7 @@ function BookingsContent() {
               <div className="flex items-center gap-3">
                 <IconTile icon={Plug} tone="indigo" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-900 truncate">{b.station_name}</p>
+                  <p className="font-medium text-slate-100 truncate">{b.station_name}</p>
                   <p className="text-sm text-slate-500 flex items-center gap-1.5 flex-wrap">
                     <span>{b.connector_type_name}</span>
                     <span className="text-slate-300">·</span>
@@ -240,7 +240,7 @@ function BookingsContent() {
             <Card key={s.id} className="p-3.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <IconTile icon={Zap} tone="slate" />
               <div className="flex-1 min-w-[140px] text-sm">
-                <p className="text-slate-900 truncate">
+                <p className="text-slate-100 truncate">
                   <span className="font-medium">{s.station_name}</span>
                   <span className="text-slate-400"> · {s.connector_type_name}</span>
                 </p>
@@ -248,7 +248,7 @@ function BookingsContent() {
               </div>
               <div className="flex items-center gap-2 shrink-0 ml-auto">
                 {s.energy_delivered_kwh && (
-                  <span className="text-sm font-medium text-slate-700">{Number(s.energy_delivered_kwh).toFixed(2)} kWh</span>
+                  <span className="text-sm font-medium text-slate-300">{Number(s.energy_delivered_kwh).toFixed(2)} kWh</span>
                 )}
                 <Badge status={s.session_status} />
               </div>
@@ -259,7 +259,7 @@ function BookingsContent() {
             <Card key={`booking-${b.id}`} className="p-3.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <IconTile icon={Calendar} tone="slate" />
               <div className="flex-1 min-w-[140px] text-sm">
-                <p className="text-slate-900 truncate">
+                <p className="text-slate-100 truncate">
                   <span className="font-medium">{b.station_name}</span>
                   <span className="text-slate-400"> · {b.connector_type_name}</span>
                 </p>
@@ -271,7 +271,7 @@ function BookingsContent() {
         </ul>
       </div>
 
-      <Link href="/bills" className="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+      <Link href="/bills" className="inline-flex items-center gap-1.5 text-sm text-indigo-400 hover:text-indigo-300 font-medium">
         <Receipt size={14} /> View my bills
       </Link>
     </div>

@@ -36,10 +36,10 @@ export default function RegisterPage() {
   return (
     <div className="max-w-sm mx-auto pt-6">
       <div className="flex flex-col items-center mb-6">
-        <span className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center mb-3">
-          <Car size={20} className="text-indigo-600" strokeWidth={2} />
+        <span className="w-11 h-11 rounded-xl bg-indigo-500/15 flex items-center justify-center mb-3">
+          <Car size={20} className="text-indigo-400" strokeWidth={2} />
         </span>
-        <h1 className="font-display text-xl font-semibold text-slate-900 tracking-tight">Create your driver account</h1>
+        <h1 className="font-display text-xl font-semibold text-slate-100 tracking-tight">Create your driver account</h1>
         <p className="text-sm text-slate-500 mt-1">Free — start browsing stations right away.</p>
       </div>
       <Card className="p-6">
@@ -77,7 +77,7 @@ export default function RegisterPage() {
       </Card>
       <p className="text-sm text-slate-500 mt-6 text-center">
         Already have an account?{" "}
-        <Link href="/login" className="text-indigo-600 hover:text-indigo-800 font-medium">
+        <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium">
           Log in
         </Link>
       </p>

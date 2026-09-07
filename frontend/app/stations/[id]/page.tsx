@@ -196,7 +196,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
 
   return (
     <div className={`space-y-6 animate-fade-in-up ${isDriver && activeVehicles.length > 0 && bestConnector ? "pb-20 md:pb-0" : ""}`}>
-      <Link href="/stations" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 transition-colors">
+      <Link href="/stations" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-200 transition-colors">
         <ChevronLeft size={15} /> All stations
       </Link>
 
@@ -209,12 +209,12 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
           />
           <div className="flex flex-wrap gap-4 -mt-4">
             {station.tariff && (
-              <span className="flex items-center gap-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1">
+              <span className="flex items-center gap-1.5 text-sm text-slate-300 bg-white/[0.05] border border-white/12 rounded-full px-3 py-1">
                 <Tag size={13} className="text-slate-400" />₹{station.tariff.price_per_kwh} / kWh
               </span>
             )}
             {avgRating !== null && (
-              <span className="flex items-center gap-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1">
+              <span className="flex items-center gap-1.5 text-sm text-slate-300 bg-white/[0.05] border border-white/12 rounded-full px-3 py-1">
                 <StarRating rating={Math.round(avgRating)} /> {avgRating.toFixed(1)} ({reviews.length})
               </span>
             )}
@@ -284,10 +284,10 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
         {station.chargers.map((charger) => (
           <Card key={charger.id} className="p-4">
             <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-white/[0.07] flex items-center justify-center shrink-0">
                 <Plug size={15} className="text-slate-500" />
               </div>
-              <p className="font-medium text-sm text-slate-900">
+              <p className="font-medium text-sm text-slate-100">
                 {charger.charger_model ?? "Charger"} <span className="text-slate-400 font-normal">· {charger.power_capacity_kw} kW</span>
               </p>
             </div>
@@ -301,13 +301,13 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
                     className="flex flex-wrap items-center justify-between gap-2 text-sm border-t border-slate-100 pt-2.5"
                   >
                     <span className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-slate-700">{connector.connector_type_name}</span>
+                      <span className="font-medium text-slate-300">{connector.connector_type_name}</span>
                       <span className="text-slate-400">#{connector.id} · {connector.max_power_kw} kW</span>
                       <Badge status={connector.status} />
                     </span>
                     {connector.status === "available" && activeVehicles.length > 0 && (
                       incompatible ? (
-                        <span className="flex items-center gap-1.5 text-xs text-amber-600">
+                        <span className="flex items-center gap-1.5 text-xs text-amber-400">
                           <AlertTriangle size={12} /> Not compatible with your {selectedModel!.make} {selectedModel!.model_name}
                         </span>
                       ) : (
@@ -327,7 +327,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
             </ul>
 
             {bookingConnectorId !== null && charger.connectors.some((c) => c.id === bookingConnectorId) && (
-              <form onSubmit={submitBooking} className="mt-3 space-y-3 bg-slate-50 p-3.5 rounded-lg">
+              <form onSubmit={submitBooking} className="mt-3 space-y-3 bg-white/[0.05] p-3.5 rounded-lg">
                 <div className="flex flex-wrap items-end gap-3">
                   <Field label="Start">
                     <Input
@@ -366,13 +366,13 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
           <Card className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <Clock size={15} className="text-slate-400" />
-              <p className="font-medium text-sm text-slate-900">Operating Hours</p>
+              <p className="font-medium text-sm text-slate-100">Operating Hours</p>
             </div>
-            <ul className="text-sm text-slate-600 grid grid-cols-2 lg:grid-cols-1 gap-2">
+            <ul className="text-sm text-slate-400 grid grid-cols-2 lg:grid-cols-1 gap-2">
               {sortedHours.map((h) => (
                 <li
                   key={h.id}
-                  className={`rounded-lg px-2 py-1 flex items-center justify-between gap-2 ${h.day_of_week === today ? "bg-indigo-50 text-indigo-700 font-medium" : ""}`}
+                  className={`rounded-lg px-2 py-1 flex items-center justify-between gap-2 ${h.day_of_week === today ? "bg-indigo-500/15 text-indigo-300 font-medium" : ""}`}
                 >
                   <span>{h.day_of_week.slice(0, 3)}</span>
                   <span className="tabular-nums">{h.opening_time.slice(0, 5)}–{h.closing_time.slice(0, 5)}</span>
@@ -385,7 +385,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
         <Card className={`p-4 ${sortedHours.length === 0 ? "lg:col-span-2" : ""}`}>
           <div className="flex items-center gap-2 mb-3">
             <MessageSquare size={15} className="text-slate-400" />
-            <p className="font-medium text-sm text-slate-900">Reviews</p>
+            <p className="font-medium text-sm text-slate-100">Reviews</p>
           </div>
           <ul className="space-y-3 mb-4">
             {reviews.map((r) => (
@@ -394,9 +394,9 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
                 <div>
                   <div className="flex items-center gap-2">
                     <StarRating rating={r.rating} />
-                    {r.is_verified && <span className="text-xs text-emerald-700 font-medium">Verified visit</span>}
+                    {r.is_verified && <span className="text-xs text-emerald-400 font-medium">Verified visit</span>}
                   </div>
-                  {r.comment && <p className="text-slate-600 mt-0.5">{r.comment}</p>}
+                  {r.comment && <p className="text-slate-400 mt-0.5">{r.comment}</p>}
                 </div>
               </li>
             ))}

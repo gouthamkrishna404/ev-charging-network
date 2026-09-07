@@ -643,7 +643,7 @@ def run():
 
         notifications = [
             Notification(
-                user_id=demo_user.id, message="Welcome to Volt Grid! Add a vehicle to get started.",
+                user_id=demo_user.id, message="Welcome to Voltaic! Add a vehicle to get started.",
                 type="System", sent_date=now - timedelta(days=88), is_read=True,
             ),
             Notification(

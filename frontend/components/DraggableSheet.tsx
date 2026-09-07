@@ -74,7 +74,7 @@ export default function DraggableSheet({
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-30 bg-white rounded-t-2xl shadow-[0_-8px_30px_rgba(67,56,202,0.16)] flex flex-col md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 bg-[#100e1a] border-t border-white/10 rounded-t-2xl shadow-[0_-8px_30px_rgba(0,0,0,0.5)] flex flex-col md:hidden"
       style={{
         height: `${heightPx}px`,
         marginBottom: "calc(64px + var(--safe-bottom))",
@@ -86,7 +86,7 @@ export default function DraggableSheet({
         onPointerDown={startDrag}
         className="shrink-0 pt-2 pb-1 flex flex-col items-center cursor-grab active:cursor-grabbing touch-none"
       >
-        <span className="w-9 h-1.5 rounded-full bg-slate-300" />
+        <span className="w-9 h-1.5 rounded-full bg-white/20" />
       </div>
       <div className="shrink-0 px-4">{header}</div>
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 min-h-0" style={{ touchAction: "pan-y" }}>

@@ -96,7 +96,7 @@ function VehiclesContent() {
                     </span>
                   )}
                   {model?.connector_type_names.map((type) => (
-                    <span key={type} className="flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">
+                    <span key={type} className="flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-white/[0.07] rounded-full px-2 py-0.5">
                       <Plug size={10} /> {type}
                     </span>
                   ))}
@@ -117,7 +117,7 @@ function VehiclesContent() {
       </ul>
 
       <Card className="p-4 max-w-sm">
-        <h2 className="font-medium text-sm text-slate-900 mb-3">Add a vehicle</h2>
+        <h2 className="font-medium text-sm text-slate-100 mb-3">Add a vehicle</h2>
         <form onSubmit={handleAdd} className="space-y-3">
           <Field label="Model">
             <Select className="w-full" value={modelId} onChange={(e) => setModelId(Number(e.target.value))}>

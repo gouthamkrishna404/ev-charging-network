@@ -113,9 +113,9 @@ function BillsContent() {
               <IconTile icon={Receipt} tone={bill.payment ? "slate" : "amber"} />
               <div className="flex-1 min-w-[160px]">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-slate-900">{bill.station_name}</p>
+                  <p className="font-medium text-slate-100">{bill.station_name}</p>
                   {Number(bill.subscription_discount) > 0 && (
-                    <span className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 rounded-full px-2 py-0.5">
+                    <span className="flex items-center gap-1 text-[11px] font-medium text-indigo-300 bg-indigo-500/15 rounded-full px-2 py-0.5">
                       <Sparkles size={10} /> discount applied
                     </span>
                   )}
@@ -126,17 +126,17 @@ function BillsContent() {
 
                 <div className="mt-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm max-w-xs">
                   <span className="text-slate-500">Energy</span>
-                  <span className="text-right text-slate-700">₹{bill.energy_charge}</span>
+                  <span className="text-right text-slate-300">₹{bill.energy_charge}</span>
                   {Number(bill.subscription_discount) > 0 && (
                     <>
-                      <span className="text-emerald-600">Subscription discount</span>
-                      <span className="text-right text-emerald-600">−₹{bill.subscription_discount}</span>
+                      <span className="text-emerald-400">Subscription discount</span>
+                      <span className="text-right text-emerald-400">−₹{bill.subscription_discount}</span>
                     </>
                   )}
                   <span className="text-slate-500">Tax</span>
-                  <span className="text-right text-slate-700">₹{bill.tax_amount}</span>
-                  <span className="font-semibold text-slate-900 border-t border-slate-100 pt-1">Total</span>
-                  <span className="text-right font-semibold text-slate-900 border-t border-slate-100 pt-1">₹{bill.total_amount}</span>
+                  <span className="text-right text-slate-300">₹{bill.tax_amount}</span>
+                  <span className="font-semibold text-slate-100 border-t border-slate-100 pt-1">Total</span>
+                  <span className="text-right font-semibold text-slate-100 border-t border-slate-100 pt-1">₹{bill.total_amount}</span>
                 </div>
               </div>
 

@@ -17,9 +17,9 @@ export function Card({
   return (
     <div
       style={style}
-      className={`rounded-2xl border border-indigo-950/[0.06] bg-white shadow-[0_1px_2px_rgba(67,56,202,0.05),0_1px_1px_rgba(67,56,202,0.04)] ${
+      className={`rounded-2xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm shadow-[0_8px_24px_-14px_rgba(0,0,0,0.6)] ${
         interactive
-          ? "transition-all duration-200 hover:shadow-[0_16px_28px_-10px_rgba(67,56,202,0.18)] hover:-translate-y-0.5 hover:border-indigo-200 cursor-pointer active:translate-y-0 active:shadow-sm"
+          ? "transition-all duration-200 hover:bg-white/[0.06] hover:shadow-[0_20px_36px_-14px_rgba(99,102,241,0.35)] hover:-translate-y-0.5 hover:border-indigo-400/30 cursor-pointer active:translate-y-0 active:shadow-sm"
           : ""
       } ${className}`}
     >
@@ -32,8 +32,8 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   return (
     <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
       <div>
-        <h1 className="font-display text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-slate-500 mt-1.5 max-w-2xl leading-relaxed">{subtitle}</p>}
+        <h1 className="font-display text-2xl sm:text-[28px] font-semibold text-slate-100 tracking-tight">{title}</h1>
+        {subtitle && <p className="text-sm text-slate-400 mt-1.5 max-w-2xl leading-relaxed">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -43,44 +43,44 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 export function SectionHeading({ icon: Icon, title }: { icon?: LucideIcon; title: string }) {
   return (
     <div className="flex items-center gap-2 mb-3">
-      {Icon && <Icon size={16} className="text-slate-400" strokeWidth={2} />}
-      <p className="text-sm font-semibold text-slate-700">{title}</p>
+      {Icon && <Icon size={16} className="text-slate-500" strokeWidth={2} />}
+      <p className="text-sm font-semibold text-slate-300">{title}</p>
     </div>
   );
 }
 
 const badgeStyles: Record<string, string> = {
-  active: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  available: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  successful: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  approved: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  confirmed: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  charging: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  in_progress: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  completed: "bg-slate-100 text-slate-600 ring-slate-500/20",
-  refunded: "bg-slate-100 text-slate-600 ring-slate-500/20",
-  inactive: "bg-slate-100 text-slate-600 ring-slate-500/20",
-  cancelled: "bg-red-50 text-red-700 ring-red-600/10",
-  no_show: "bg-red-50 text-red-700 ring-red-600/10",
-  failed: "bg-red-50 text-red-700 ring-red-600/10",
-  rejected: "bg-red-50 text-red-700 ring-red-600/10",
-  occupied: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  reserved: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  out_of_service: "bg-red-50 text-red-700 ring-red-600/10",
-  pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  open: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  super_admin: "bg-violet-50 text-violet-700 ring-violet-600/20",
-  station_manager: "bg-slate-100 text-slate-600 ring-slate-500/20",
-  finance_manager: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  active: "bg-emerald-500/15 text-emerald-300 ring-emerald-400/25",
+  available: "bg-emerald-500/15 text-emerald-300 ring-emerald-400/25",
+  successful: "bg-emerald-500/15 text-emerald-300 ring-emerald-400/25",
+  approved: "bg-emerald-500/15 text-emerald-300 ring-emerald-400/25",
+  confirmed: "bg-blue-500/15 text-blue-300 ring-blue-400/25",
+  charging: "bg-blue-500/15 text-blue-300 ring-blue-400/25",
+  in_progress: "bg-blue-500/15 text-blue-300 ring-blue-400/25",
+  completed: "bg-white/[0.06] text-slate-300 ring-white/15",
+  refunded: "bg-white/[0.06] text-slate-300 ring-white/15",
+  inactive: "bg-white/[0.06] text-slate-300 ring-white/15",
+  cancelled: "bg-red-500/15 text-red-300 ring-red-400/25",
+  no_show: "bg-red-500/15 text-red-300 ring-red-400/25",
+  failed: "bg-red-500/15 text-red-300 ring-red-400/25",
+  rejected: "bg-red-500/15 text-red-300 ring-red-400/25",
+  occupied: "bg-amber-500/15 text-amber-300 ring-amber-400/25",
+  reserved: "bg-amber-500/15 text-amber-300 ring-amber-400/25",
+  out_of_service: "bg-red-500/15 text-red-300 ring-red-400/25",
+  pending: "bg-amber-500/15 text-amber-300 ring-amber-400/25",
+  open: "bg-amber-500/15 text-amber-300 ring-amber-400/25",
+  super_admin: "bg-violet-500/15 text-violet-300 ring-violet-400/25",
+  station_manager: "bg-white/[0.06] text-slate-300 ring-white/15",
+  finance_manager: "bg-white/[0.06] text-slate-300 ring-white/15",
 };
 
 export function Badge({ status }: { status: string }) {
-  const style = badgeStyles[status] ?? "bg-slate-100 text-slate-600 ring-slate-500/20";
+  const style = badgeStyles[status] ?? "bg-white/[0.06] text-slate-300 ring-white/15";
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap ${style}`}
     >
-      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
+      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
       {status.replace(/_/g, " ")}
     </span>
   );
@@ -108,10 +108,11 @@ export function Button({
     lg: "px-5 py-2.75 text-base",
   };
   const variants: Record<string, string> = {
-    primary: "bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_1px_2px_rgba(79,70,229,0.3),0_4px_10px_-2px_rgba(79,70,229,0.35)] hover:shadow-[0_1px_2px_rgba(79,70,229,0.3),0_6px_16px_-2px_rgba(79,70,229,0.45)]",
-    secondary: "border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 bg-white",
-    danger: "border border-red-200 text-red-700 hover:bg-red-50 bg-white",
-    ghost: "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
+    primary:
+      "bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_1px_2px_rgba(79,70,229,0.4),0_4px_14px_-2px_rgba(79,70,229,0.5)] hover:shadow-[0_1px_2px_rgba(79,70,229,0.4),0_6px_20px_-2px_rgba(79,70,229,0.6)]",
+    secondary: "border border-white/15 text-slate-200 hover:bg-white/[0.06] hover:border-white/25 bg-white/[0.02]",
+    danger: "border border-red-500/30 text-red-300 hover:bg-red-500/10 bg-transparent",
+    ghost: "text-slate-400 hover:text-slate-100 hover:bg-white/[0.06]",
   };
   return (
     <button
@@ -127,9 +128,9 @@ export function Button({
 
 export function EmptyState({ children, icon: Icon }: { children: ReactNode; icon?: LucideIcon }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-10 text-center border border-dashed border-slate-200 rounded-xl">
-      {Icon && <Icon size={22} className="text-slate-300" strokeWidth={1.5} />}
-      <p className="text-sm text-slate-500 max-w-xs">{children}</p>
+    <div className="flex flex-col items-center justify-center gap-2 py-10 text-center border border-dashed border-white/15 rounded-xl">
+      {Icon && <Icon size={22} className="text-slate-400" strokeWidth={1.5} />}
+      <p className="text-sm text-slate-400 max-w-xs">{children}</p>
     </div>
   );
 }
@@ -138,7 +139,7 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`border border-slate-300 rounded-lg px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-shadow ${props.className ?? ""}`}
+      className={`bg-white/[0.04] border border-white/12 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400/60 transition-shadow ${props.className ?? ""}`}
     />
   );
 }
@@ -147,7 +148,7 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className={`border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-shadow bg-white ${props.className ?? ""}`}
+      className={`bg-[#131120] border border-white/12 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400/60 transition-shadow ${props.className ?? ""}`}
     />
   );
 }
@@ -165,8 +166,8 @@ export function Alert({ type, children }: { type: "error" | "success"; children:
   const isError = type === "error";
   const Icon = isError ? AlertTriangle : CheckCircle2;
   const styles = isError
-    ? "bg-red-50 text-red-700 ring-1 ring-red-200"
-    : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
+    ? "bg-red-500/10 text-red-300 ring-1 ring-red-500/25"
+    : "bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/25";
   return (
     <div className={`flex items-start gap-2 text-sm rounded-lg px-3 py-2.5 ${styles}`}>
       <Icon size={16} className="mt-0.5 shrink-0" />
@@ -177,9 +178,9 @@ export function Alert({ type, children }: { type: "error" | "success"; children:
 
 export function StarRating({ rating }: { rating: number }) {
   return (
-    <span className="text-amber-500 text-sm tracking-tight" aria-label={`${rating} out of 5 stars`}>
+    <span className="text-amber-400 text-sm tracking-tight" aria-label={`${rating} out of 5 stars`}>
       {"★".repeat(rating)}
-      <span className="text-slate-200">{"★".repeat(5 - rating)}</span>
+      <span className="text-white/15">{"★".repeat(5 - rating)}</span>
     </span>
   );
 }
@@ -187,8 +188,8 @@ export function StarRating({ rating }: { rating: number }) {
 export function Stat({ value, label }: { value: string | number; label: string }) {
   return (
     <div className="text-center">
-      <span className="block text-2xl font-semibold text-slate-900 tracking-tight tabular-nums">{value}</span>
-      <span className="text-sm text-slate-500">{label}</span>
+      <span className="block text-2xl font-semibold text-slate-100 tracking-tight tabular-nums">{value}</span>
+      <span className="text-sm text-slate-400">{label}</span>
     </div>
   );
 }
@@ -210,9 +211,9 @@ export function StatCard({
     <Card className="p-4 sm:p-5 flex items-center gap-3.5">
       <IconTile icon={Icon} tone={tone} />
       <div className="min-w-0">
-        <p className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight tabular-nums truncate">{value}</p>
-        <p className="text-xs sm:text-sm text-slate-500 truncate">{label}</p>
-        {hint && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{hint}</p>}
+        <p className="text-xl sm:text-2xl font-semibold text-slate-100 tracking-tight tabular-nums truncate">{value}</p>
+        <p className="text-xs sm:text-sm text-slate-400 truncate">{label}</p>
+        {hint && <p className="text-[11px] text-slate-500 mt-0.5 truncate">{hint}</p>}
       </div>
     </Card>
   );
@@ -220,7 +221,7 @@ export function StatCard({
 
 export function Skeleton({ className = "" }: { className?: string }) {
   return (
-    <div className={`relative overflow-hidden rounded-lg bg-slate-200/70 ${className}`}>
+    <div className={`relative overflow-hidden rounded-lg bg-white/[0.06] ${className}`}>
       <div className="absolute inset-0 animate-shimmer" />
     </div>
   );
@@ -238,14 +239,14 @@ export function SegmentedControl<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={`inline-flex items-center gap-0.5 bg-slate-100 rounded-full p-1 ${className}`}>
+    <div className={`inline-flex items-center gap-0.5 bg-white/[0.05] border border-white/10 rounded-full p-1 ${className}`}>
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
           className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-1.5 rounded-full transition-all ${
-            value === opt.value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            value === opt.value ? "bg-white/12 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           {opt.icon && <opt.icon size={14} />}
@@ -273,11 +274,11 @@ export function ProgressRing({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = progress === null ? 0.28 : Math.min(1, Math.max(0, progress));
-  const color = tone === "volt" ? "var(--color-volt-500)" : "var(--color-indigo-600)";
+  const color = tone === "volt" ? "var(--color-volt-500)" : "var(--color-indigo-500)";
   return (
     <div className="relative inline-flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className={progress === null ? "animate-spin" : "-rotate-90"} style={{ animationDuration: "1.4s" }}>
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={strokeWidth} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={strokeWidth} />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -320,14 +321,14 @@ export function Sheet({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] animate-fade-in" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <div
-        className="relative w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col animate-slide-up-sheet sm:animate-scale-in"
+        className="relative w-full sm:max-w-md bg-[#100e1a] border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col animate-slide-up-sheet sm:animate-scale-in"
         style={{ paddingBottom: "var(--safe-bottom)" }}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-          <p className="font-semibold text-slate-900">{title}</p>
-          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-700 p-1 -m-1 rounded-full hover:bg-slate-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
+          <p className="font-semibold text-slate-100">{title}</p>
+          <button onClick={onClose} aria-label="Close" className="text-slate-500 hover:text-slate-200 p-1 -m-1 rounded-full hover:bg-white/10">
             <X size={18} />
           </button>
         </div>
@@ -347,15 +348,15 @@ export function Tabs({
   onChange: (key: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-x-1 gap-y-1 border-b border-slate-200">
+    <div className="flex flex-wrap gap-x-1 gap-y-1 border-b border-white/10">
       {tabs.map((tab) => (
         <button
           key={tab.key}
           onClick={() => onChange(tab.key)}
           className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors -mb-px ${
             active === tab.key
-              ? "border-indigo-600 text-indigo-700"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "border-indigo-400 text-indigo-300"
+              : "border-transparent text-slate-500 hover:text-slate-300"
           }`}
         >
           {tab.icon && <tab.icon size={14} />}
@@ -382,7 +383,7 @@ export function Chip({
       className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors whitespace-nowrap ${
         active
           ? "bg-indigo-600 border-indigo-600 text-white"
-          : "bg-white border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+          : "bg-white/[0.03] border-white/15 text-slate-300 hover:border-white/30 hover:bg-white/[0.06]"
       }`}
     >
       {children}
@@ -400,13 +401,13 @@ export function Switch({
   label: string;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none whitespace-nowrap">
+    <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none whitespace-nowrap">
       <button
         type="button"
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${checked ? "bg-indigo-600" : "bg-slate-300"}`}
+        className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${checked ? "bg-indigo-600" : "bg-white/15"}`}
       >
         <span
           className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${checked ? "translate-x-4" : ""}`}
@@ -425,11 +426,11 @@ export function IconTile({
   tone?: "slate" | "indigo" | "amber" | "emerald" | "volt";
 }) {
   const tones: Record<string, string> = {
-    slate: "bg-slate-100 text-slate-600",
-    indigo: "bg-indigo-50 text-indigo-600",
-    amber: "bg-amber-50 text-amber-600",
-    emerald: "bg-emerald-50 text-emerald-600",
-    volt: "bg-volt-50 text-volt-600",
+    slate: "bg-white/[0.06] text-slate-300",
+    indigo: "bg-indigo-500/15 text-indigo-300",
+    amber: "bg-amber-500/15 text-amber-300",
+    emerald: "bg-emerald-500/15 text-emerald-300",
+    volt: "bg-volt-500/15 text-volt-400",
   };
   return (
     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tones[tone]}`}>

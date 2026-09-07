@@ -54,16 +54,16 @@ function AuditLogContent() {
         </div>
       ) : (
       <Card>
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-white/[0.06]">
           {entries.map((e) => {
             const Icon = ACTION_ICONS[e.action] ?? History;
             return (
               <li key={e.id} className="p-3.5 text-sm flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-7 h-7 rounded-full bg-white/[0.07] flex items-center justify-center shrink-0 mt-0.5">
                   <Icon size={13} className="text-slate-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="font-medium text-slate-900">{e.action}</span>{" "}
+                  <span className="font-medium text-slate-100">{e.action}</span>{" "}
                   <span className="text-slate-500">
                     on {e.table_affected.replace(/_/g, " ")} #{e.record_id}
                   </span>

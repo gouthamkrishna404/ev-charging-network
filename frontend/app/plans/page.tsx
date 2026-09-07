@@ -68,7 +68,7 @@ function PlansContent() {
   if (plans === null) {
     return (
       <div className="space-y-8">
-        <PageHeader title="Volt Grid Membership" subtitle="Loading plans…" />
+        <PageHeader title="Voltaic Membership" subtitle="Loading plans…" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[...Array(3)].map((_, i) => (
             <Skeleton key={i} className="h-64" />
@@ -85,17 +85,17 @@ function PlansContent() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Volt Grid Membership"
+        title="Voltaic Membership"
         subtitle="A single platform-wide membership, not any one operator's product. Pick a tier and its discount applies at every station on the network. Only one membership can be active at a time."
       />
 
-      <div className="flex items-center gap-2 text-xs font-medium text-indigo-600 bg-indigo-50 ring-1 ring-indigo-100 rounded-full px-3 py-1.5 w-fit">
+      <div className="flex items-center gap-2 text-xs font-medium text-indigo-300 bg-indigo-500/15 ring-1 ring-indigo-400/25 rounded-full px-3 py-1.5 w-fit">
         <Globe size={13} /> Membership works everywhere — it isn&apos;t tied to whichever station sold it
       </div>
 
       {activeSubscription && (
         <Card className="p-4 border-indigo-200 ring-1 ring-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white flex items-center justify-between flex-wrap gap-3">
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-slate-300">
             Active plan: <span className="font-semibold">{planFor(activeSubscription)?.plan_name}</span> — {planFor(activeSubscription)?.discount_percentage}% off everywhere, until{" "}
             {activeSubscription.end_date} <Badge status={activeSubscription.status} />
           </p>
@@ -119,12 +119,12 @@ function PlansContent() {
                   Best value
                 </span>
               )}
-              <p className="font-semibold text-slate-900">{plan.plan_name}</p>
-              <p className="text-2xl font-semibold mt-2 text-slate-900">
+              <p className="font-semibold text-slate-100">{plan.plan_name}</p>
+              <p className="text-2xl font-semibold mt-2 text-slate-100">
                 ₹{plan.subscription_fee}
                 <span className="text-sm text-slate-500 font-normal"> / {plan.validity_days} days</span>
               </p>
-              <ul className="text-sm text-slate-600 mt-3 space-y-1.5 flex-1">
+              <ul className="text-sm text-slate-400 mt-3 space-y-1.5 flex-1">
                 <li className="flex items-center gap-2">
                   <Zap size={13} className="text-indigo-500" /> {plan.discount_percentage}% off at every station
                 </li>

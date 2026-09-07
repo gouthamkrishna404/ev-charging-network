@@ -128,7 +128,7 @@ function AdminPlansContent() {
 
       {canManage ? (
         <Card className="p-5 max-w-md">
-          <h2 className="font-medium text-sm text-slate-900 mb-3">Create a plan</h2>
+          <h2 className="font-medium text-sm text-slate-100 mb-3">Create a plan</h2>
           <form onSubmit={createPlan} className="space-y-3">
             <Field label="Plan name">
               <Input className="w-full" value={planName} onChange={(e) => setPlanName(e.target.value)} required />
@@ -147,8 +147,8 @@ function AdminPlansContent() {
                 <Input type="number" className="w-full" placeholder="Unlimited" value={maxSessions} onChange={(e) => setMaxSessions(e.target.value)} />
               </Field>
             </div>
-            <label className="flex items-center gap-2 text-sm text-slate-600">
-              <input type="checkbox" checked={priorityBooking} onChange={(e) => setPriorityBooking(e.target.checked)} />
+            <label className="flex items-center gap-2 text-sm text-slate-400">
+              <input type="checkbox" className="accent-indigo-500" checked={priorityBooking} onChange={(e) => setPriorityBooking(e.target.checked)} />
               Priority booking
             </label>
             <Button type="submit" className="w-full justify-center">

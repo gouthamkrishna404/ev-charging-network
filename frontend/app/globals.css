@@ -19,19 +19,46 @@ body {
   font-feature-settings: "cv11", "ss01";
 }
 
-/* The app's light canvas -- replaces a flat slate-50 fill. A warm off-white base
-   with the same indigo/volt hues used in the dark hero sections washed very
-   faintly into the corners, fixed to the viewport so it reads as one continuous
-   surface behind every page (including the empty margins beside a centered
-   layout on wide screens) rather than a color that resets at each section. */
+/* The app's canvas, dark by default everywhere -- not just a hero section.
+   A near-black indigo-tinted base with the same indigo/violet/volt hues used
+   throughout the product washed faintly into the corners, fixed to the
+   viewport so it reads as one continuous surface behind every page rather
+   than a color that resets at each section -- including the margins beside a
+   centered content column on wide screens, which is exactly where a
+   dark-hero-in-a-light-page used to seam visibly. */
 .bg-canvas {
-  background-color: #f9f9fc;
+  background-color: #08070e;
   background-image:
-    radial-gradient(1100px 620px at -5% -10%, color-mix(in srgb, var(--color-indigo-500) 8%, transparent), transparent 60%),
-    radial-gradient(900px 560px at 105% 0%, color-mix(in srgb, var(--color-volt-500) 7%, transparent), transparent 60%),
-    radial-gradient(1000px 640px at 100% 100%, color-mix(in srgb, var(--color-indigo-500) 6%, transparent), transparent 60%);
+    radial-gradient(1200px 700px at -10% -15%, color-mix(in srgb, var(--color-indigo-500) 22%, transparent), transparent 60%),
+    radial-gradient(1000px 620px at 110% -10%, color-mix(in srgb, var(--color-volt-500) 14%, transparent), transparent 60%),
+    radial-gradient(1100px 700px at 105% 105%, color-mix(in srgb, var(--color-indigo-600) 18%, transparent), transparent 55%),
+    radial-gradient(900px 600px at -10% 105%, color-mix(in srgb, var(--color-violet-500) 12%, transparent), transparent 55%);
   background-attachment: fixed;
   background-repeat: no-repeat;
+}
+
+/* Slim, dark-appropriate scrollbar so the browser chrome doesn't clash with
+   the rest of the theme (WebKit/Blink only; Firefox falls back to its own
+   dark-aware default, which is fine). */
+* {
+  scrollbar-color: color-mix(in srgb, var(--color-indigo-400) 40%, transparent) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-indigo-400) 35%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-indigo-400) 55%, transparent);
+  background-clip: padding-box;
 }
 
 /* Tabular numbers for anything showing live/shifting figures -- keeps digit
@@ -102,7 +129,7 @@ body {
   100% { background-position: 200% 0; }
 }
 .animate-shimmer {
-  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  background-image: linear-gradient(90deg, transparent, rgba(165, 180, 252, 0.12), transparent);
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
 }
@@ -132,11 +159,13 @@ body {
   }
 }
 
-/* Leaflet popups restyled to match the app's card language instead of the
-   library's boxy default chrome. */
+/* Leaflet popups restyled to match the app's dark card language instead of
+   the library's boxy, light-only default chrome. */
 .leaflet-popup-content-wrapper {
   border-radius: 14px;
-  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.25);
+  background: #100f1c;
+  color: #e2e8f0;
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(129, 140, 248, 0.12);
   padding: 0;
 }
 .leaflet-popup-content {
@@ -144,18 +173,37 @@ body {
   width: auto !important;
 }
 .leaflet-popup-tip {
-  box-shadow: 0 4px 10px -2px rgba(15, 23, 42, 0.15);
+  background: #100f1c;
+  box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.4);
+}
+.leaflet-popup-close-button {
+  color: #94a3b8 !important;
 }
 .leaflet-container {
   font-family: var(--font-sans);
+  background: #0d0c16;
 }
 
-/* Mute the stock OSM tile palette a touch so our indigo/volt markers and
-   clusters read as the focal color instead of competing with busy tiles. */
+/* Re-tint the stock (light-only) OSM raster tiles into a dark map -- invert
+   then rotate the hue back so water reads blue instead of the muddy brown a
+   plain invert produces, rather than depending on a paid/rate-limited dark
+   tile provider. */
 .leaflet-tile-pane {
-  filter: saturate(0.75) brightness(1.04) contrast(0.96);
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
 }
 
 .leaflet-control-zoom a {
-  color: var(--color-slate-600) !important;
+  background: #15131f !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(129, 140, 248, 0.18) !important;
+}
+.leaflet-control-zoom a:hover {
+  background: #1c1a2b !important;
+}
+.leaflet-control-attribution {
+  background: rgba(10, 9, 18, 0.75) !important;
+  color: #64748b !important;
+}
+.leaflet-control-attribution a {
+  color: #94a3b8 !important;
 }

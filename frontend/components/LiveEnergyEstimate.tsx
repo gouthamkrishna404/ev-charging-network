@@ -32,7 +32,7 @@ export default function LiveEnergyEstimate({ startTime, powerKw }: { startTime: 
         <Zap size={20} className="text-indigo-500" fill="currentColor" strokeWidth={0} />
       </ProgressRing>
       <div>
-        <p className="text-2xl font-semibold text-slate-900 tabular-nums leading-none">~{estimatedKwh.toFixed(2)} kWh</p>
+        <p className="text-2xl font-semibold text-slate-100 tabular-nums leading-none">~{estimatedKwh.toFixed(2)} kWh</p>
         <p className="text-sm text-slate-500 mt-1.5">{formatElapsed(elapsedSeconds)} elapsed · {powerKw} kW</p>
       </div>
     </div>

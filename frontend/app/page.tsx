@@ -128,7 +128,7 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-slate-300 mt-6 max-w-lg text-lg leading-relaxed">
-              Volt Grid is the marketplace that puts every operator&apos;s charging stations on one live map —
+              Voltaic is the marketplace that puts every operator&apos;s charging stations on one live map —
               find a connector, book it or plug in on the spot, and pay automatically when you&apos;re done.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -178,12 +178,12 @@ export default function Home() {
             </div>
             <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-white/95 backdrop-blur rounded-full pl-2.5 pr-3 py-1.5 shadow-lg">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-ring" />
-              <span className="text-xs font-semibold text-slate-700">{stats ? `${stats.available} available now` : "Loading…"}</span>
+              <span className="text-xs font-semibold text-slate-300">{stats ? `${stats.available} available now` : "Loading…"}</span>
             </div>
             {stats?.avgRating && (
               <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-white/95 backdrop-blur rounded-full px-3 py-1.5 shadow-lg">
                 <Star size={12} className="text-amber-500" fill="currentColor" />
-                <span className="text-xs font-semibold text-slate-700">{stats.avgRating.toFixed(1)} avg rating</span>
+                <span className="text-xs font-semibold text-slate-300">{stats.avgRating.toFixed(1)} avg rating</span>
               </div>
             )}
           </div>
@@ -201,16 +201,16 @@ export default function Home() {
 
       {/* How it works */}
       <section>
-        <h2 className="font-display text-2xl font-semibold text-slate-900 tracking-tight text-center mb-10">How it works</h2>
+        <h2 className="font-display text-2xl font-semibold text-slate-100 tracking-tight text-center mb-10">How it works</h2>
         <div className="relative grid grid-cols-1 gap-6 sm:grid-cols-3">
-          <div aria-hidden className="hidden sm:block absolute top-[26px] left-[16.5%] right-[16.5%] h-px bg-slate-200" />
+          <div aria-hidden className="hidden sm:block absolute top-[26px] left-[16.5%] right-[16.5%] h-px bg-white/10" />
           {STEPS.map((step, i) => (
             <Card key={step.title} className="p-5 relative" interactive>
-              <span className="absolute -top-3 -left-3 w-7 h-7 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center ring-4 ring-slate-50">
+              <span className="absolute -top-3 -left-3 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-semibold flex items-center justify-center ring-4 ring-[#08070e]">
                 {i + 1}
               </span>
               <IconTile icon={step.icon} tone="indigo" />
-              <p className="font-medium text-slate-900 mt-3">{step.title}</p>
+              <p className="font-medium text-slate-100 mt-3">{step.title}</p>
               <p className="text-sm text-slate-500 mt-1">{step.text}</p>
             </Card>
           ))}
@@ -223,11 +223,11 @@ export default function Home() {
           <div className="flex items-center gap-3 mb-4">
             <IconTile icon={Car} tone="indigo" />
             <div>
-              <p className="font-display font-semibold text-slate-900">For drivers</p>
+              <p className="font-display font-semibold text-slate-100">For drivers</p>
               <p className="text-sm text-slate-500">Everything you need to charge without friction.</p>
             </div>
           </div>
-          <ul className="space-y-3 text-sm text-slate-600 flex-1">
+          <ul className="space-y-3 text-sm text-slate-400 flex-1">
             {DRIVER_FEATURES.map((f) => (
               <li key={f.text} className="flex gap-2.5 items-start">
                 <f.icon size={16} className="text-indigo-500 mt-0.5 shrink-0" strokeWidth={2} />
@@ -237,18 +237,18 @@ export default function Home() {
           </ul>
           {/* A real station-card preview, styled exactly like the one on /stations --
               proof of what the product actually looks like, not an illustration of it. */}
-          <div className="mt-5 rounded-xl border border-slate-200 p-3.5 bg-slate-50/60">
+          <div className="mt-5 rounded-xl border border-white/10 p-3.5 bg-white/[0.04]">
             <div className="flex items-start gap-3">
               <IconTile icon={Zap} tone="indigo" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 truncate">Volt Grid - Indiranagar</p>
+                <p className="text-sm font-medium text-slate-100 truncate">Volt Grid - Indiranagar</p>
                 <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
                   <MapPin size={11} className="shrink-0" /> 100 Feet Road, Bengaluru
                 </p>
               </div>
               <Badge status="available" />
             </div>
-            <div className="mt-2.5 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div className="mt-2.5 h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
               <div className="h-full w-3/4 rounded-full bg-emerald-500" />
             </div>
           </div>
@@ -257,11 +257,11 @@ export default function Home() {
           <div className="flex items-center gap-3 mb-4">
             <IconTile icon={Building2} tone="amber" />
             <div>
-              <p className="font-display font-semibold text-slate-900">For station operators</p>
+              <p className="font-display font-semibold text-slate-100">For station operators</p>
               <p className="text-sm text-slate-500">Run your network from one dashboard.</p>
             </div>
           </div>
-          <ul className="space-y-3 text-sm text-slate-600 flex-1">
+          <ul className="space-y-3 text-sm text-slate-400 flex-1">
             {OPERATOR_FEATURES.map((f) => (
               <li key={f.text} className="flex gap-2.5 items-start">
                 <f.icon size={16} className="text-amber-500 mt-0.5 shrink-0" strokeWidth={2} />
@@ -269,13 +269,13 @@ export default function Home() {
               </li>
             ))}
           </ul>
-          <div className="mt-5 rounded-xl border border-slate-200 p-3.5 bg-slate-50/60 flex gap-6">
+          <div className="mt-5 rounded-xl border border-white/10 p-3.5 bg-white/[0.04] flex gap-6">
             <div>
-              <p className="text-lg font-semibold text-slate-900 tabular-nums">{stats?.operators ?? "—"}</p>
+              <p className="text-lg font-semibold text-slate-100 tabular-nums">{stats?.operators ?? "—"}</p>
               <p className="text-xs text-slate-500">operators on the network</p>
             </div>
             <div>
-              <p className="text-lg font-semibold text-slate-900 tabular-nums">{stats?.reviewCount ?? "—"}</p>
+              <p className="text-lg font-semibold text-slate-100 tabular-nums">{stats?.reviewCount ?? "—"}</p>
               <p className="text-xs text-slate-500">driver reviews</p>
             </div>
           </div>
@@ -285,12 +285,12 @@ export default function Home() {
       {/* Testimonials */}
       {reviews.length > 0 && (
         <section>
-          <h2 className="font-display text-2xl font-semibold text-slate-900 tracking-tight text-center mb-8">What drivers are saying</h2>
+          <h2 className="font-display text-2xl font-semibold text-slate-100 tracking-tight text-center mb-8">What drivers are saying</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {reviews.map((r) => (
               <Card key={r.id} className="p-5">
                 <StarRating rating={r.rating} />
-                <p className="text-sm text-slate-600 mt-2.5 leading-relaxed">&ldquo;{r.comment}&rdquo;</p>
+                <p className="text-sm text-slate-400 mt-2.5 leading-relaxed">&ldquo;{r.comment}&rdquo;</p>
                 <p className="text-xs text-slate-400 mt-3">
                   {r.reviewer_name} · {r.station_name}, {r.city}
                 </p>

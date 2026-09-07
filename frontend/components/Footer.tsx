@@ -1,24 +1,22 @@
 import Link from "next/link";
-import { Zap } from "lucide-react";
+import { LogoMark } from "./Logo";
 
 const TECH = ["Next.js", "FastAPI", "PostgreSQL", "SQLAlchemy"];
 
 export default function Footer() {
   return (
-    <footer className="border-t border-indigo-100 mt-16">
+    <footer className="border-t border-white/[0.07] mt-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-1.5 font-display font-semibold text-slate-900">
-          <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-            <Zap size={13} className="text-white" fill="white" strokeWidth={0} />
-          </span>
-          Volt Grid
+        <Link href="/" className="flex items-center gap-2 font-display font-semibold text-slate-100">
+          <LogoMark size={22} />
+          Voltaic
         </Link>
-        <p className="text-xs text-slate-400 order-3 sm:order-2">
-          &copy; {new Date().getFullYear()} Volt Grid. A demo EV charging marketplace.
+        <p className="text-xs text-slate-500 order-3 sm:order-2">
+          &copy; {new Date().getFullYear()} Voltaic. A demo EV charging marketplace.
         </p>
         <div className="flex items-center gap-2 order-2 sm:order-3">
           {TECH.map((t) => (
-            <span key={t} className="text-[11px] font-medium text-slate-500 bg-slate-100 rounded-full px-2.5 py-1">
+            <span key={t} className="text-[11px] font-medium text-slate-400 bg-white/[0.05] border border-white/10 rounded-full px-2.5 py-1">
               {t}
             </span>
           ))}

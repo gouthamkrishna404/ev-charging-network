@@ -72,19 +72,19 @@ function popupHtml(s: Station, distanceKm: number | null) {
   );
   const types = Array.from(new Set(s.chargers.flatMap((c) => c.connectors.map((con) => con.connector_type_name))));
   const chips = types
-    .map((t) => `<span class="text-[10px] font-medium text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">${t}</span>`)
+    .map((t) => `<span class="text-[10px] font-medium text-slate-500 bg-white/[0.07] rounded-full px-2 py-0.5">${t}</span>`)
     .join("");
   return `
     <div style="font-size:13px;width:220px;font-family:inherit">
       <div class="px-3.5 pt-3.5 pb-3">
         <div class="flex items-start justify-between gap-2">
-          <p class="font-semibold text-slate-900 leading-snug">${s.station_name}</p>
-          ${s.avg_rating ? `<span class="shrink-0 flex items-center gap-0.5 text-xs font-medium text-amber-600">★ ${s.avg_rating}</span>` : ""}
+          <p class="font-semibold text-slate-100 leading-snug">${s.station_name}</p>
+          ${s.avg_rating ? `<span class="shrink-0 flex items-center gap-0.5 text-xs font-medium text-amber-400">★ ${s.avg_rating}</span>` : ""}
         </div>
         <p class="text-slate-400 text-[11px] mt-0.5">${s.operator_name} · ${s.location.city}${distanceKm !== null ? ` · ${formatDistance(distanceKm)}` : ""}</p>
         <div class="flex flex-wrap gap-1 mt-2">${chips}</div>
         <div class="flex items-center justify-between mt-2.5">
-          <span class="text-xs font-semibold ${availableCount > 0 ? "text-emerald-700" : "text-slate-400"}">${availableCount} / ${connectorCount} available</span>
+          <span class="text-xs font-semibold ${availableCount > 0 ? "text-emerald-400" : "text-slate-400"}">${availableCount} / ${connectorCount} available</span>
           ${s.tariff ? `<span class="text-xs text-slate-500">₹${s.tariff.price_per_kwh}/kWh</span>` : ""}
         </div>
       </div>

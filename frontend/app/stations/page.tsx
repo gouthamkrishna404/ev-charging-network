@@ -30,9 +30,9 @@ function StationCard({ item, selected, onHover }: { item: Enriched; selected?: b
           <IconTile icon={Zap} tone={availableCount > 0 ? "indigo" : "slate"} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="font-medium text-slate-900 truncate">{s.station_name}</p>
+              <p className="font-medium text-slate-100 truncate">{s.station_name}</p>
               {s.avg_rating !== null && (
-                <span className="flex items-center gap-0.5 text-xs text-amber-600 shrink-0">
+                <span className="flex items-center gap-0.5 text-xs text-amber-400 shrink-0">
                   <Star size={11} fill="currentColor" /> {s.avg_rating}
                 </span>
               )}
@@ -47,20 +47,20 @@ function StationCard({ item, selected, onHover }: { item: Enriched; selected?: b
         </div>
         <div className="mt-3 flex flex-wrap gap-1">
           {Array.from(new Set(s.chargers.flatMap((c) => c.connectors.map((con) => con.connector_type_name)))).map((type) => (
-            <span key={type} className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">
+            <span key={type} className="text-[10px] font-medium text-slate-500 bg-white/[0.07] rounded-full px-2 py-0.5">
               {type}
             </span>
           ))}
         </div>
         <div className="mt-3 space-y-1.5">
-          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+          <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${availableCount > 0 ? "bg-emerald-500" : "bg-slate-300"}`}
+              className={`h-full rounded-full transition-all duration-500 ${availableCount > 0 ? "bg-emerald-500" : "bg-white/15"}`}
               style={{ width: `${pct}%` }}
             />
           </div>
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-medium ${availableCount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
+            <span className={`text-xs font-medium ${availableCount > 0 ? "text-emerald-400" : "text-slate-400"}`}>
               {availableCount} / {connectorCount} available
             </span>
             {s.tariff && (
@@ -290,7 +290,7 @@ export default function StationsPage() {
       <button
         onClick={useMyLocation}
         disabled={locating}
-        className="md:hidden fixed right-4 z-10 w-11 h-11 rounded-full bg-white shadow-lg flex items-center justify-center text-slate-600 disabled:opacity-60"
+        className="md:hidden fixed right-4 z-10 w-11 h-11 rounded-full bg-[#15131f] border border-white/10 shadow-lg flex items-center justify-center text-slate-300 disabled:opacity-60"
         style={{ bottom: "calc(64px + var(--safe-bottom) + 16px)" }}
         aria-label="Use my location"
       >
@@ -303,13 +303,13 @@ export default function StationsPage() {
         header={
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <p className="font-display font-semibold text-slate-900">
+              <p className="font-display font-semibold text-slate-100">
                 {stations ? `${filtered.length} station${filtered.length === 1 ? "" : "s"}` : "Charging Stations"}
               </p>
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border ${
-                  activeFilterCount > 0 ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-300 text-slate-600"
+                  activeFilterCount > 0 ? "border-indigo-300 bg-indigo-500/15 text-indigo-300" : "border-white/15 text-slate-400"
                 }`}
               >
                 <SlidersHorizontal size={12} />
@@ -334,7 +334,7 @@ export default function StationsPage() {
             {areaFilterBounds && (
               <button
                 onClick={() => setAreaFilterBounds(null)}
-                className="text-xs font-medium text-indigo-600 flex items-center gap-1"
+                className="text-xs font-medium text-indigo-400 flex items-center gap-1"
               >
                 Showing this area only · Clear
               </button>
@@ -363,18 +363,18 @@ export default function StationsPage() {
           <div className="mb-6 animate-fade-in-up">
             <div className="flex items-center gap-1.5 mb-2.5">
               <Navigation size={14} className="text-indigo-500" />
-              <p className="text-sm font-semibold text-slate-700">Nearby stations</p>
+              <p className="text-sm font-semibold text-slate-300">Nearby stations</p>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1">
               {nearby.map(({ station: s, distanceKm, availableCount, connectorCount }) => (
                 <Link key={s.id} href={`/stations/${s.id}`} className="shrink-0 w-56">
                   <Card className="p-3.5 h-full" interactive>
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-400 mb-1.5">
                       <Navigation size={11} /> {formatDistance(distanceKm!)} away
                     </div>
-                    <p className="text-sm font-medium text-slate-900 truncate">{s.station_name}</p>
+                    <p className="text-sm font-medium text-slate-100 truncate">{s.station_name}</p>
                     <p className="text-xs text-slate-400 truncate mt-0.5">{s.location.city}</p>
-                    <p className={`text-xs font-medium mt-1.5 ${availableCount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
+                    <p className={`text-xs font-medium mt-1.5 ${availableCount > 0 ? "text-emerald-400" : "text-slate-400"}`}>
                       {availableCount} / {connectorCount} available
                     </p>
                   </Card>
@@ -399,8 +399,8 @@ export default function StationsPage() {
               onClick={() => setShowFilters(!showFilters)}
               className={`inline-flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-lg border transition-colors ${
                 showFilters || activeFilterCount > 0
-                  ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                  : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                  ? "border-indigo-300 bg-indigo-500/15 text-indigo-300"
+                  : "border-white/15 text-slate-400 hover:bg-white/[0.05]"
               }`}
             >
               <SlidersHorizontal size={14} />
@@ -420,7 +420,7 @@ export default function StationsPage() {
             <button
               onClick={useMyLocation}
               disabled={locating}
-              className="inline-flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 shrink-0"
+              className="inline-flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-lg border border-white/15 text-slate-400 hover:bg-white/[0.05] transition-colors disabled:opacity-50 shrink-0"
             >
               <LocateFixed size={14} className={locating ? "animate-pulse" : ""} />
               {userLocation ? "Location set" : "Use my location"}
@@ -430,7 +430,7 @@ export default function StationsPage() {
           {areaFilterBounds && (
             <button
               onClick={() => setAreaFilterBounds(null)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 ring-1 ring-indigo-100 rounded-full px-3 py-1"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-300 bg-indigo-500/15 ring-1 ring-indigo-400/25 rounded-full px-3 py-1"
             >
               Showing stations in the map&apos;s current area only · Clear
             </button>

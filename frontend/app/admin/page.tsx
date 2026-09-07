@@ -323,7 +323,7 @@ function AdminContent() {
             <StatCard icon={Star} tone="emerald" value={overview.avg_rating ?? "—"} label="Average rating" />
           </div>
 
-          <Link href="/admin/analytics" className="flex items-center justify-between gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 -mt-2">
+          <Link href="/admin/analytics" className="flex items-center justify-between gap-2 text-sm font-medium text-indigo-400 hover:text-indigo-300 -mt-2">
             Full analytics, trends &amp; breakdowns <ArrowRight size={14} />
           </Link>
 
@@ -333,11 +333,11 @@ function AdminContent() {
 
           {pendingRefunds.length > 0 && (
             <Link href="/admin/refunds">
-              <Card className="p-4 border-amber-200 ring-1 ring-amber-100 bg-amber-50/40 flex items-center gap-3" interactive>
+              <Card className="p-4 border-amber-500/25 ring-1 ring-amber-400/20 bg-amber-500/[0.06] flex items-center gap-3" interactive>
                 <IconTile icon={RotateCcw} tone="amber" />
-                <p className="text-sm text-slate-700 flex-1">
+                <p className="text-sm text-slate-300 flex-1">
                   <span className="font-semibold">{pendingRefunds.length}</span> refund request{pendingRefunds.length === 1 ? "" : "s"} waiting on your review —{" "}
-                  <span className="font-medium text-amber-700">
+                  <span className="font-medium text-amber-400">
                     ₹{pendingRefunds.reduce((sum, r) => sum + Number(r.amount), 0).toFixed(2)}
                   </span>{" "}
                   total
@@ -384,10 +384,10 @@ function AdminContent() {
       <ul className="space-y-3">
         {stations.map((s) => (
           <Card key={s.id} className="overflow-hidden">
-            <button onClick={() => toggle(s.id)} className="w-full text-left p-4 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+            <button onClick={() => toggle(s.id)} className="w-full text-left p-4 flex items-center gap-3 hover:bg-white/[0.05] transition-colors">
               <IconTile icon={Zap} tone={s.status === "active" ? "indigo" : "slate"} />
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900">{s.station_name}</p>
+                <p className="font-medium text-slate-100">{s.station_name}</p>
                 <p className="text-sm text-slate-500 flex items-center gap-1 truncate">
                   <MapPin size={12} className="shrink-0" />
                   {s.location.address_line}, {s.location.city}
@@ -438,14 +438,14 @@ function AdminContent() {
                     <div>
                       <ul className="space-y-2">
                         {s.chargers.map((c) => (
-                          <li key={c.id} className="text-sm bg-slate-50 rounded-lg p-3">
+                          <li key={c.id} className="text-sm bg-white/[0.05] rounded-lg p-3">
                             <p className="font-medium flex items-center gap-2">
                               <Plug size={14} className="text-slate-400" />
                               {c.charger_model ?? "Charger"} <span className="text-slate-400 font-normal">· {c.power_capacity_kw} kW</span>
                             </p>
                             <ul className="ml-6 mt-1.5 space-y-1">
                               {c.connectors.map((con) => (
-                                <li key={con.id} className="flex items-center gap-2 text-slate-600">
+                                <li key={con.id} className="flex items-center gap-2 text-slate-400">
                                   {con.connector_type_name} #{con.id} · {con.max_power_kw} kW <Badge status={con.status} />
                                 </li>
                               ))}
@@ -498,11 +498,12 @@ function AdminContent() {
                     <div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                         {DAYS.map((d) => (
-                          <label key={d} className="flex items-center gap-2 text-xs text-slate-600">
+                          <label key={d} className="flex items-center gap-2 text-xs text-slate-400">
                             <input
                               type="checkbox"
                               checked={hours[d].enabled}
                               onChange={(e) => setHours({ ...hours, [d]: { ...hours[d], enabled: e.target.checked } })}
+                              className="accent-indigo-500"
                             />
                             <span className="w-20">{d}</span>
                             <input
@@ -510,14 +511,14 @@ function AdminContent() {
                               value={hours[d].open}
                               disabled={!hours[d].enabled}
                               onChange={(e) => setHours({ ...hours, [d]: { ...hours[d], open: e.target.value } })}
-                              className="border border-slate-300 rounded px-1 py-0.5"
+                              className="border border-white/15 rounded px-1 py-0.5 bg-white/[0.04] text-slate-100"
                             />
                             <input
                               type="time"
                               value={hours[d].close}
                               disabled={!hours[d].enabled}
                               onChange={(e) => setHours({ ...hours, [d]: { ...hours[d], close: e.target.value } })}
-                              className="border border-slate-300 rounded px-1 py-0.5"
+                              className="border border-white/15 rounded px-1 py-0.5 bg-white/[0.04] text-slate-100"
                             />
                           </label>
                         ))}
@@ -533,7 +534,7 @@ function AdminContent() {
                     <div>
                       <ul className="space-y-1.5 mb-3">
                         {stationAdmins.map((a) => (
-                          <li key={a.id} className="flex items-center justify-between bg-slate-50 rounded-lg p-2.5 text-sm">
+                          <li key={a.id} className="flex items-center justify-between bg-white/[0.05] rounded-lg p-2.5 text-sm">
                             <span className="flex items-center gap-2">
                               {a.name} <Badge status={a.role} />
                             </span>
@@ -569,7 +570,7 @@ function AdminContent() {
                     <div>
                       <ul className="space-y-1.5 mb-3">
                         {maintenance.map((m) => (
-                          <li key={m.id} className="flex items-center justify-between bg-slate-50 rounded-lg p-2.5 text-sm">
+                          <li key={m.id} className="flex items-center justify-between bg-white/[0.05] rounded-lg p-2.5 text-sm">
                             <span>
                               Connector #{m.connector_id} — {m.issue_description} <Badge status={m.status} />
                             </span>
@@ -610,7 +611,7 @@ function AdminContent() {
                         </Button>
                       </form>
                       {technicians.length === 0 && (
-                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                        <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
                           <Ban size={12} /> No technicians yet — add one from the Team page first.
                         </p>
                       )}
@@ -620,7 +621,7 @@ function AdminContent() {
                   {activeTab === "bookings" && (
                     <ul className="space-y-1.5">
                       {bookings.map((b) => (
-                        <li key={b.id} className="text-slate-600 flex items-center gap-2 text-sm bg-slate-50 rounded-lg p-2.5">
+                        <li key={b.id} className="text-slate-400 flex items-center gap-2 text-sm bg-white/[0.05] rounded-lg p-2.5">
                           Connector #{b.connector_id} — {new Date(b.start_time).toLocaleString()} <Badge status={b.status} />
                         </li>
                       ))}

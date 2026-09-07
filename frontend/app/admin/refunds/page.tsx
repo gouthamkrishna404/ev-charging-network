@@ -63,7 +63,7 @@ function AdminRefundsContent() {
           <Card key={r.id} className="p-4 flex flex-wrap items-center gap-3">
             <IconTile icon={RotateCcw} tone={r.status === "pending" ? "amber" : "slate"} />
             <div className="flex-1 min-w-[160px] text-sm">
-              <p className="text-slate-900">
+              <p className="text-slate-100">
                 Payment #{r.payment_id} — <span className="font-semibold">₹{r.amount}</span>
               </p>
               <p className="text-slate-500">{r.reason}</p>

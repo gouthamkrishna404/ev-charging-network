@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api";
 import Link from "next/link";
-import { LogIn, Plug } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { saveSession } from "@/lib/auth";
 import { Alert, Button, Card, Field, Input } from "@/components/ui";
+import { LogoMark } from "@/components/Logo";
 
 interface TokenResponse {
   access_token: string;
@@ -42,11 +43,11 @@ export default function LoginPage() {
   return (
     <div className="max-w-sm mx-auto pt-6">
       <div className="flex flex-col items-center mb-6">
-        <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30 mb-3">
-          <Plug size={20} className="text-white" strokeWidth={2.5} />
+        <span className="mb-3 rounded-xl shadow-lg shadow-indigo-500/20">
+          <LogoMark size={44} />
         </span>
-        <h1 className="font-display text-xl font-semibold text-slate-900 tracking-tight">Welcome back</h1>
-        <p className="text-sm text-slate-500 mt-1">Log in to Volt Grid</p>
+        <h1 className="font-display text-xl font-semibold text-slate-100 tracking-tight">Welcome back</h1>
+        <p className="text-sm text-slate-500 mt-1">Log in to Voltaic</p>
       </div>
       <Card className="p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -83,13 +84,13 @@ export default function LoginPage() {
       </p>
       <p className="text-sm text-slate-500 mt-6 text-center">
         Don&apos;t have an account?{" "}
-        <Link href="/register" className="text-indigo-600 hover:text-indigo-800 font-medium">
+        <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium">
           Register
         </Link>
       </p>
       <p className="text-sm text-slate-500 mt-2 text-center">
         Run a charging network?{" "}
-        <Link href="/register-operator" className="text-indigo-600 hover:text-indigo-800 font-medium">
+        <Link href="/register-operator" className="text-indigo-400 hover:text-indigo-300 font-medium">
           Register your operator account
         </Link>
       </p>
