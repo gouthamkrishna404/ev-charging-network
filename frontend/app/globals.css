@@ -3,25 +3,143 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-volt-50: #f4fce3;
+  --color-volt-100: #e3fbb2;
+  --color-volt-400: #a3e635;
+  --color-volt-500: #84cc16;
+  --color-volt-600: #65a30d;
+}
+
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+body {
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Tabular numbers for anything showing live/shifting figures -- keeps digit
+   widths stable so stat cards and live counters don't jitter as they update. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-indigo-500) 25%, transparent);
+}
+
+/* Custom focus ring so keyboard focus is visible without the default browser
+   outline clashing against rounded/colored surfaces. */
+:focus-visible {
+  outline: 2px solid var(--color-indigo-500);
+  outline-offset: 2px;
 }
 
 @keyframes fade-in-up {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
 .animate-fade-in-up {
-  animation: fade-in-up 0.35s ease-out both;
+  animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out both;
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scale-in {
+  animation: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes slide-up-sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up-sheet {
+  animation: slide-up-sheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-volt-500) 45%, transparent); }
+  100% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--color-volt-500) 0%, transparent); }
+}
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* Decorative radial mesh used behind premium/hero surfaces. Kept as a utility
+   class (rather than inline styles) so the gradient stops stay consistent
+   everywhere it's reused. */
+.bg-mesh-hero {
+  background-image:
+    radial-gradient(ellipse 60% 50% at 20% 0%, color-mix(in srgb, var(--color-indigo-500) 35%, transparent), transparent),
+    radial-gradient(ellipse 50% 40% at 90% 20%, color-mix(in srgb, var(--color-volt-500) 25%, transparent), transparent);
+}
+
+.bg-dot-grid {
+  background-image: radial-gradient(color-mix(in srgb, white 14%, transparent) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in-up {
+  .animate-fade-in-up,
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-slide-up-sheet,
+  .animate-pulse-ring,
+  .animate-shimmer {
     animation: none;
   }
+}
+
+/* Leaflet popups restyled to match the app's card language instead of the
+   library's boxy default chrome. */
+.leaflet-popup-content-wrapper {
+  border-radius: 14px;
+  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.25);
+  padding: 0;
+}
+.leaflet-popup-content {
+  margin: 0;
+  width: auto !important;
+}
+.leaflet-popup-tip {
+  box-shadow: 0 4px 10px -2px rgba(15, 23, 42, 0.15);
+}
+.leaflet-container {
+  font-family: var(--font-sans);
+}
+
+/* Mute the stock OSM tile palette a touch so our indigo/volt markers and
+   clusters read as the focal color instead of competing with busy tiles. */
+.leaflet-tile-pane {
+  filter: saturate(0.75) brightness(1.04) contrast(0.96);
+}
+
+.leaflet-control-zoom a {
+  color: var(--color-slate-600) !important;
 }

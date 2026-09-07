@@ -1,5 +1,7 @@
-import { ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, LucideIcon } from "lucide-react";
+"use client";
+
+import { ReactNode, useEffect } from "react";
+import { AlertTriangle, CheckCircle2, Loader2, LucideIcon, X } from "lucide-react";
 
 export function Card({
   children,
@@ -15,8 +17,10 @@ export function Card({
   return (
     <div
       style={style}
-      className={`rounded-xl border border-slate-200 bg-white shadow-sm ${
-        interactive ? "transition-all hover:shadow-md hover:-translate-y-0.5 hover:border-slate-300" : ""
+      className={`rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_1px_1px_rgba(15,23,42,0.03)] ${
+        interactive
+          ? "transition-all duration-200 hover:shadow-[0_12px_24px_-8px_rgba(15,23,42,0.12)] hover:-translate-y-0.5 hover:border-slate-300 cursor-pointer active:translate-y-0 active:shadow-sm"
+          : ""
       } ${className}`}
     >
       {children}
@@ -26,10 +30,10 @@ export function Card({
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-slate-500 mt-1.5 max-w-2xl">{subtitle}</p>}
+        <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">{title}</h1>
+        {subtitle && <p className="text-sm text-slate-500 mt-1.5 max-w-2xl leading-relaxed">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -92,19 +96,20 @@ export function Button({
 }: {
   children: ReactNode;
   variant?: "primary" | "secondary" | "danger" | "ghost";
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   loading?: boolean;
   className?: string;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const base =
-    "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap";
+    "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap active:scale-[0.97]";
   const sizes: Record<string, string> = {
     sm: "px-2.5 py-1 text-xs",
     md: "px-3.5 py-2 text-sm",
+    lg: "px-5 py-2.75 text-base",
   };
   const variants: Record<string, string> = {
-    primary: "bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm shadow-indigo-600/20",
-    secondary: "border border-slate-300 text-slate-700 hover:bg-slate-50 bg-white",
+    primary: "bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_1px_2px_rgba(79,70,229,0.3),0_4px_10px_-2px_rgba(79,70,229,0.35)] hover:shadow-[0_1px_2px_rgba(79,70,229,0.3),0_6px_16px_-2px_rgba(79,70,229,0.45)]",
+    secondary: "border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 bg-white",
     danger: "border border-red-200 text-red-700 hover:bg-red-50 bg-white",
     ghost: "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
   };
@@ -182,14 +187,154 @@ export function StarRating({ rating }: { rating: number }) {
 export function Stat({ value, label }: { value: string | number; label: string }) {
   return (
     <div className="text-center">
-      <span className="block text-2xl font-semibold text-slate-900 tracking-tight">{value}</span>
+      <span className="block text-2xl font-semibold text-slate-900 tracking-tight tabular-nums">{value}</span>
       <span className="text-sm text-slate-500">{label}</span>
     </div>
   );
 }
 
+export function StatCard({
+  icon: Icon,
+  value,
+  label,
+  tone = "indigo",
+  hint,
+}: {
+  icon: LucideIcon;
+  value: string | number;
+  label: string;
+  tone?: "slate" | "indigo" | "amber" | "emerald" | "volt";
+  hint?: string;
+}) {
+  return (
+    <Card className="p-4 sm:p-5 flex items-center gap-3.5">
+      <IconTile icon={Icon} tone={tone} />
+      <div className="min-w-0">
+        <p className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight tabular-nums truncate">{value}</p>
+        <p className="text-xs sm:text-sm text-slate-500 truncate">{label}</p>
+        {hint && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{hint}</p>}
+      </div>
+    </Card>
+  );
+}
+
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-slate-200/70 ${className}`} />;
+  return (
+    <div className={`relative overflow-hidden rounded-lg bg-slate-200/70 ${className}`}>
+      <div className="absolute inset-0 animate-shimmer" />
+    </div>
+  );
+}
+
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  className = "",
+}: {
+  options: { value: T; label: string; icon?: LucideIcon }[];
+  value: T;
+  onChange: (value: T) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`inline-flex items-center gap-0.5 bg-slate-100 rounded-full p-1 ${className}`}>
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-1.5 rounded-full transition-all ${
+            value === opt.value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          {opt.icon && <opt.icon size={14} />}
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function ProgressRing({
+  size = 88,
+  strokeWidth = 7,
+  progress,
+  tone = "indigo",
+  children,
+}: {
+  size?: number;
+  strokeWidth?: number;
+  /** 0-1, or null for an indeterminate spinning ring (e.g. an open-ended charging session). */
+  progress: number | null;
+  tone?: "indigo" | "volt";
+  children?: ReactNode;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = progress === null ? 0.28 : Math.min(1, Math.max(0, progress));
+  const color = tone === "volt" ? "var(--color-volt-500)" : "var(--color-indigo-600)";
+  return (
+    <div className="relative inline-flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className={progress === null ? "animate-spin" : "-rotate-90"} style={{ animationDuration: "1.4s" }}>
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={strokeWidth} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - clamped)}
+          style={{ transition: "stroke-dashoffset 0.6s ease" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">{children}</div>
+    </div>
+  );
+}
+
+export function Sheet({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] animate-fade-in" onClick={onClose} />
+      <div
+        className="relative w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col animate-slide-up-sheet sm:animate-scale-in"
+        style={{ paddingBottom: "var(--safe-bottom)" }}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+          <p className="font-semibold text-slate-900">{title}</p>
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-700 p-1 -m-1 rounded-full hover:bg-slate-100">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="overflow-y-auto px-5 py-4">{children}</div>
+      </div>
+    </div>
+  );
 }
 
 export function Tabs({
@@ -272,11 +417,19 @@ export function Switch({
   );
 }
 
-export function IconTile({ icon: Icon, tone = "slate" }: { icon: LucideIcon; tone?: "slate" | "indigo" | "amber" }) {
+export function IconTile({
+  icon: Icon,
+  tone = "slate",
+}: {
+  icon: LucideIcon;
+  tone?: "slate" | "indigo" | "amber" | "emerald" | "volt";
+}) {
   const tones: Record<string, string> = {
     slate: "bg-slate-100 text-slate-600",
     indigo: "bg-indigo-50 text-indigo-600",
     amber: "bg-amber-50 text-amber-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+    volt: "bg-volt-50 text-volt-600",
   };
   return (
     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tones[tone]}`}>

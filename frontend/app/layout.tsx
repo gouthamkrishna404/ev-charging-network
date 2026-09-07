@@ -29,8 +29,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <Toaster position="top-right" richColors closeButton toastOptions={{ style: { fontFamily: "var(--font-geist-sans)" } }} />
         <Nav />
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">{children}</main>
-        <Footer />
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-8">{children}</main>
+        <div className="pb-16 md:pb-0">
+          <Footer />
+        </div>
       </body>
     </html>
   );

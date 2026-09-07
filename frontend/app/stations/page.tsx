@@ -3,16 +3,16 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import { LocateFixed, MapPin, Navigation, Search, SlidersHorizontal, Star, Tag, Zap } from "lucide-react";
+import { List, LocateFixed, Map as MapIcon, MapPin, Navigation, Search, SlidersHorizontal, Star, Tag, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Station } from "@/lib/types";
 import { formatDistance, haversineKm } from "@/lib/geo";
-import { Card, Chip, EmptyState, IconTile, Input, PageHeader, Select, Skeleton, Switch } from "@/components/ui";
+import { Card, Chip, EmptyState, IconTile, Input, PageHeader, SegmentedControl, Select, Skeleton, Switch } from "@/components/ui";
 
 const StationsMap = dynamic(() => import("@/components/StationsMap"), {
   ssr: false,
-  loading: () => <Skeleton className="h-[380px] w-full" />,
+  loading: () => <Skeleton className="h-full w-full" />,
 });
 
 type SortKey = "recommended" | "price_asc" | "rating_desc" | "distance";
@@ -27,6 +27,8 @@ export default function StationsPage() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   useEffect(() => {
     apiFetch<Station[]>("/stations")
@@ -188,12 +190,6 @@ export default function StationsPage() {
         </div>
       )}
 
-      {stations && stations.length > 0 && (
-        <Card className="mb-6 p-2 overflow-hidden">
-          <StationsMap stations={filtered.map((f) => f.station)} userLocation={userLocation} />
-        </Card>
-      )}
-
       <div className="mb-5 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[220px]">
@@ -235,6 +231,15 @@ export default function StationsPage() {
             <LocateFixed size={14} className={locating ? "animate-pulse" : ""} />
             {userLocation ? "Location set" : "Use my location"}
           </button>
+          <SegmentedControl
+            className="lg:hidden shrink-0"
+            value={mobileView}
+            onChange={setMobileView}
+            options={[
+              { value: "list", label: "List", icon: List },
+              { value: "map", label: "Map", icon: MapIcon },
+            ]}
+          />
         </div>
 
         {showFilters && (
@@ -279,65 +284,87 @@ export default function StationsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {filtered.map(({ station: s, connectorCount, availableCount, distanceKm }, i) => {
-          const pct = connectorCount ? Math.round((availableCount / connectorCount) * 100) : 0;
-          return (
-            <Link key={s.id} href={`/stations/${s.id}`}>
-              <Card className="p-4 h-full animate-fade-in-up" interactive style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}>
-                <div className="flex items-start gap-3">
-                  <IconTile icon={Zap} tone={availableCount > 0 ? "indigo" : "slate"} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-medium text-slate-900 truncate">{s.station_name}</p>
-                      {s.avg_rating !== null && (
-                        <span className="flex items-center gap-0.5 text-xs text-amber-600 shrink-0">
-                          <Star size={11} fill="currentColor" /> {s.avg_rating}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-1 truncate">
-                      <MapPin size={12} className="shrink-0" />
-                      {s.location.address_line}, {s.location.city}
-                      {distanceKm !== null && <span className="text-slate-400 shrink-0"> · {formatDistance(distanceKm)}</span>}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-0.5">{s.operator_name}</p>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {Array.from(new Set(s.chargers.flatMap((c) => c.connectors.map((con) => con.connector_type_name)))).map(
-                    (type) => (
-                      <span key={type} className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">
-                        {type}
-                      </span>
-                    )
-                  )}
-                </div>
-                <div className="mt-3 space-y-1.5">
-                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${availableCount > 0 ? "bg-emerald-500" : "bg-slate-300"}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-medium ${availableCount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
-                      {availableCount} / {connectorCount} available
-                    </span>
-                    {s.tariff && (
-                      <span className="text-xs text-slate-500 flex items-center gap-1">
-                        <Tag size={11} />₹{s.tariff.price_per_kwh}/kWh
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
-      {stations && filtered.length === 0 && <EmptyState icon={Search}>No stations match your filters.</EmptyState>}
-      {stations?.length === 0 && <EmptyState icon={Zap}>No stations found.</EmptyState>}
+      {stations !== null && (
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_480px] gap-5 items-start">
+          <div className={mobileView === "map" ? "hidden lg:block" : ""}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filtered.map(({ station: s, connectorCount, availableCount, distanceKm }, i) => {
+                const pct = connectorCount ? Math.round((availableCount / connectorCount) * 100) : 0;
+                return (
+                  <Link key={s.id} href={`/stations/${s.id}`} onMouseEnter={() => setSelectedId(s.id)}>
+                    <Card
+                      className={`p-4 h-full animate-fade-in-up ${selectedId === s.id ? "ring-2 ring-indigo-400" : ""}`}
+                      interactive
+                      style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <IconTile icon={Zap} tone={availableCount > 0 ? "indigo" : "slate"} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium text-slate-900 truncate">{s.station_name}</p>
+                            {s.avg_rating !== null && (
+                              <span className="flex items-center gap-0.5 text-xs text-amber-600 shrink-0">
+                                <Star size={11} fill="currentColor" /> {s.avg_rating}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-1 truncate">
+                            <MapPin size={12} className="shrink-0" />
+                            {s.location.address_line}, {s.location.city}
+                            {distanceKm !== null && <span className="text-slate-400 shrink-0"> · {formatDistance(distanceKm)}</span>}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5">{s.operator_name}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {Array.from(new Set(s.chargers.flatMap((c) => c.connectors.map((con) => con.connector_type_name)))).map(
+                          (type) => (
+                            <span key={type} className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">
+                              {type}
+                            </span>
+                          )
+                        )}
+                      </div>
+                      <div className="mt-3 space-y-1.5">
+                        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${availableCount > 0 ? "bg-emerald-500" : "bg-slate-300"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-medium ${availableCount > 0 ? "text-emerald-700" : "text-slate-400"}`}>
+                            {availableCount} / {connectorCount} available
+                          </span>
+                          {s.tariff && (
+                            <span className="text-xs text-slate-500 flex items-center gap-1">
+                              <Tag size={11} />₹{s.tariff.price_per_kwh}/kWh
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+            {filtered.length === 0 && <EmptyState icon={Search}>No stations match your filters.</EmptyState>}
+            {stations.length === 0 && <EmptyState icon={Zap}>No stations found.</EmptyState>}
+          </div>
+
+          <div className={`sticky top-20 ${mobileView === "list" ? "hidden lg:block" : ""}`}>
+            <Card className="overflow-hidden p-0">
+              <StationsMap
+                stations={filtered.map((f) => f.station)}
+                userLocation={userLocation}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                height="calc(100vh - 180px)"
+              />
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Ban,
-  BarChart3,
+  BadgeIndianRupee,
   Building2,
   Calendar,
   CheckCircle2,
@@ -15,6 +15,8 @@ import {
   Plug,
   Plus,
   Power,
+  RotateCcw,
+  Star,
   Tag,
   UserMinus,
   UserPlus,
@@ -26,8 +28,8 @@ import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
 import { ConnectorTypeOut, Station } from "@/lib/types";
-import { AdminBooking, Maintenance, Revenue, Technician, TeamAdmin } from "@/lib/admin-types";
-import { Alert, Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select, Stat, Tabs } from "@/components/ui";
+import { AdminBooking, AdminRefund, AnalyticsOverview, Maintenance, Revenue, Technician, TeamAdmin } from "@/lib/admin-types";
+import { Alert, Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select, Stat, StatCard, Tabs } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -61,7 +63,8 @@ function AdminContent() {
   const [assignAdminId, setAssignAdminId] = useState<number | "">("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [canManageTeam, setCanManageTeam] = useState(false);
-  const [networkTotals, setNetworkTotals] = useState<{ revenue: number; sessions: number } | null>(null);
+  const [overview, setOverview] = useState<AnalyticsOverview["kpis"] | null>(null);
+  const [pendingRefunds, setPendingRefunds] = useState<AdminRefund[]>([]);
 
   const [showNewStation, setShowNewStation] = useState(false);
   const [stationName, setStationName] = useState("");
@@ -84,18 +87,20 @@ function AdminContent() {
 
   async function load() {
     try {
-      const [s, ct, tech, tm, analytics] = await Promise.all([
+      const [s, ct, tech, tm, analytics, refunds] = await Promise.all([
         apiFetch<Station[]>("/admin/stations"),
         apiFetch<ConnectorTypeOut[]>("/connector-types"),
         apiFetch<Technician[]>("/admin/technicians"),
         apiFetch<TeamAdmin[]>("/admin/team"),
-        apiFetch<{ kpis: { total_revenue: number; total_sessions: number } }>("/admin/analytics/overview?days=36500"),
+        apiFetch<AnalyticsOverview>("/admin/analytics/overview?days=36500"),
+        apiFetch<AdminRefund[]>("/admin/refunds"),
       ]);
       setStations(s);
       setConnectorTypes(ct);
       setTechnicians(tech);
       setTeam(tm);
-      setNetworkTotals({ revenue: analytics.kpis.total_revenue, sessions: analytics.kpis.total_sessions });
+      setOverview(analytics.kpis);
+      setPendingRefunds(refunds.filter((r) => r.status === "pending"));
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Failed to load dashboard data");
     }
@@ -306,28 +311,35 @@ function AdminContent() {
       />
       {loadError && <Alert type="error">{loadError}</Alert>}
 
-      {stations.length > 0 && networkTotals && (
-        <Link href="/admin/analytics">
-          <Card className="p-5" interactive>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-                <div className="flex items-center gap-3">
-                  <IconTile icon={BarChart3} tone="indigo" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700">Network overview</p>
-                    <p className="text-xs text-slate-400">Full analytics, trends &amp; breakdowns →</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-6">
-                  <Stat value={`₹${networkTotals.revenue.toLocaleString("en-IN")}`} label="total revenue" />
-                  <Stat value={networkTotals.sessions} label="completed sessions" />
-                  <Stat value={stations.length} label="stations" />
-                </div>
-              </div>
-              <ArrowRight size={18} className="text-slate-300 shrink-0" />
-            </div>
-          </Card>
-        </Link>
+      {stations.length > 0 && overview && (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <StatCard icon={BadgeIndianRupee} tone="indigo" value={`₹${overview.total_revenue.toLocaleString("en-IN")}`} label="Total revenue" />
+            <StatCard icon={Zap} tone="amber" value={overview.total_sessions.toLocaleString("en-IN")} label="Completed sessions" />
+            <StatCard icon={Building2} tone="slate" value={stations.length} label="Stations you manage" />
+            <StatCard icon={Star} tone="emerald" value={overview.avg_rating ?? "—"} label="Average rating" />
+          </div>
+
+          <Link href="/admin/analytics" className="flex items-center justify-between gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 -mt-2">
+            Full analytics, trends &amp; breakdowns <ArrowRight size={14} />
+          </Link>
+
+          {pendingRefunds.length > 0 && (
+            <Link href="/admin/refunds">
+              <Card className="p-4 border-amber-200 ring-1 ring-amber-100 bg-amber-50/40 flex items-center gap-3" interactive>
+                <IconTile icon={RotateCcw} tone="amber" />
+                <p className="text-sm text-slate-700 flex-1">
+                  <span className="font-semibold">{pendingRefunds.length}</span> refund request{pendingRefunds.length === 1 ? "" : "s"} waiting on your review —{" "}
+                  <span className="font-medium text-amber-700">
+                    ₹{pendingRefunds.reduce((sum, r) => sum + Number(r.amount), 0).toFixed(2)}
+                  </span>{" "}
+                  total
+                </p>
+                <ArrowRight size={16} className="text-amber-500 shrink-0" />
+              </Card>
+            </Link>
+          )}
+        </>
       )}
 
       {showNewStation && (

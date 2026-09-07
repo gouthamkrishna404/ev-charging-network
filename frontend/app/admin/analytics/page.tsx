@@ -5,7 +5,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContaine
 import { BadgeIndianRupee, Building2, Star, Zap } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { AnalyticsOverview } from "@/lib/admin-types";
-import { Alert, Card, IconTile, PageHeader, Select, Skeleton } from "@/components/ui";
+import { Alert, Card, PageHeader, Select, Skeleton, StatCard } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 const CONNECTOR_COLORS = ["#4f46e5", "#f59e0b", "#10b981", "#ec4899", "#06b6d4"];
@@ -60,35 +60,11 @@ function AdminAnalyticsContent() {
 
       {data && (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-            <Card className="p-4 flex items-center gap-3">
-              <IconTile icon={BadgeIndianRupee} tone="indigo" />
-              <div>
-                <p className="text-xl font-semibold text-slate-900">₹{data.kpis.total_revenue.toLocaleString("en-IN")}</p>
-                <p className="text-xs text-slate-500">All-time revenue</p>
-              </div>
-            </Card>
-            <Card className="p-4 flex items-center gap-3">
-              <IconTile icon={Zap} tone="amber" />
-              <div>
-                <p className="text-xl font-semibold text-slate-900">{data.kpis.total_sessions.toLocaleString("en-IN")}</p>
-                <p className="text-xs text-slate-500">Completed sessions</p>
-              </div>
-            </Card>
-            <Card className="p-4 flex items-center gap-3">
-              <IconTile icon={Building2} tone="slate" />
-              <div>
-                <p className="text-xl font-semibold text-slate-900">{data.kpis.active_stations}</p>
-                <p className="text-xs text-slate-500">Active stations</p>
-              </div>
-            </Card>
-            <Card className="p-4 flex items-center gap-3">
-              <IconTile icon={Star} tone="amber" />
-              <div>
-                <p className="text-xl font-semibold text-slate-900">{data.kpis.avg_rating ?? "—"}</p>
-                <p className="text-xs text-slate-500">Average rating</p>
-              </div>
-            </Card>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <StatCard icon={BadgeIndianRupee} tone="indigo" value={`₹${data.kpis.total_revenue.toLocaleString("en-IN")}`} label="All-time revenue" />
+            <StatCard icon={Zap} tone="amber" value={data.kpis.total_sessions.toLocaleString("en-IN")} label="Completed sessions" />
+            <StatCard icon={Building2} tone="slate" value={data.kpis.active_stations} label="Active stations" />
+            <StatCard icon={Star} tone="emerald" value={data.kpis.avg_rating ?? "—"} label="Average rating" />
           </div>
 
           <Card className="p-5">

@@ -56,21 +56,30 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   const [isDriver, setIsDriver] = useState(false);
 
   async function load(driverNow: boolean) {
+    // The station itself and its reviews are public -- fetch and render those first so a
+    // problem with the driver-only calls below (e.g. an expired session) never leaves the
+    // whole page stuck behind a skeleton with no visible error.
     try {
-      const [s, v, m, r] = await Promise.all([
-        apiFetch<Station>(`/stations/${id}`),
-        driverNow ? apiFetch<Vehicle[]>("/users/me/vehicles") : Promise.resolve([]),
-        driverNow ? apiFetch<VehicleModel[]>("/vehicle-models") : Promise.resolve([]),
-        apiFetch<Review[]>(`/stations/${id}/reviews`),
-      ]);
+      const [s, r] = await Promise.all([apiFetch<Station>(`/stations/${id}`), apiFetch<Review[]>(`/stations/${id}/reviews`)]);
       setStation(s);
+      setReviews(r);
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Failed to load this station");
+      return;
+    }
+
+    if (!driverNow) return;
+    try {
+      const [v, m] = await Promise.all([
+        apiFetch<Vehicle[]>("/users/me/vehicles"),
+        apiFetch<VehicleModel[]>("/vehicle-models"),
+      ]);
       setVehicles(v);
       setModels(m);
-      setReviews(r);
       const active = v.filter((vehicle) => vehicle.vehicle_status === "active");
       if (active.length > 0) setVehicleId(active[0].id);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Failed to load this station");
+      toast.error(err instanceof ApiError ? err.message : "Couldn't load your vehicles");
     }
   }
 
@@ -83,6 +92,11 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   const activeVehicles = vehicles.filter((v) => v.vehicle_status === "active");
   const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
   const selectedModel = selectedVehicle ? models.find((m) => m.id === selectedVehicle.model_id) : undefined;
+
+  const allConnectors = (station?.chargers ?? []).flatMap((c) => c.connectors);
+  const bestConnector = allConnectors.find(
+    (c) => c.status === "available" && (!selectedModel || selectedModel.connector_type_names.includes(c.connector_type_name))
+  );
 
   function vehicleLabel(v: Vehicle) {
     const model = models.find((m) => m.id === v.model_id);
@@ -177,7 +191,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   const today = DAY_ORDER[(new Date().getDay() + 6) % 7];
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className={`space-y-6 animate-fade-in-up ${isDriver && activeVehicles.length > 0 && bestConnector ? "pb-20 md:pb-0" : ""}`}>
       <Link href="/stations" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 transition-colors">
         <ChevronLeft size={15} /> All stations
       </Link>
@@ -387,6 +401,23 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
           </p>
         )}
       </Card>
+
+      {/* Mobile-only sticky action bar -- the fastest path to charging shouldn't require
+          scrolling past hours/reviews to find the Start button on a phone. Sits above the
+          bottom tab bar rather than at true bottom:0 so the two don't overlap. */}
+      {isDriver && activeVehicles.length > 0 && bestConnector && bookingConnectorId === null && (
+        <div className="md:hidden fixed inset-x-0 bottom-16 z-20 px-4 pb-2">
+          <div className="max-w-md mx-auto bg-slate-900 text-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 animate-fade-in-up">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate">{station.station_name}</p>
+              <p className="text-xs text-slate-400">{bestConnector.connector_type_name} available now</p>
+            </div>
+            <Button size="sm" onClick={() => startWalkIn(bestConnector.id)} className="shrink-0">
+              <Play size={12} /> Start now
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
