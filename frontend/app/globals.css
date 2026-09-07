@@ -167,16 +167,40 @@ body {
    consistent everywhere it's reused. The blobs themselves fade out well
    before the section's own edges horizontally, but not vertically -- at the
    hero's actual rendered height neither blob reaches transparent by the
-   bottom edge, so overflow-hidden was clipping it into a hard curved
-   cutoff right where "How it works" begins. A fixed-pixel bottom-only mask
-   (top stays untouched -- that edge blends into the nav instead) fixes it
-   regardless of how tall the hero ends up being at a given breakpoint. */
+   bottom edge, so overflow-hidden was clipping it into a hard cutoff right
+   where "How it works" begins. A percentage-based (not fixed-pixel) bottom
+   fade, so the fade zone is always a substantial fraction of however tall
+   the hero actually renders -- a fixed-pixel fade stayed a small sliver of
+   a very short hero (e.g. a wide, short-on-text viewport where the map
+   thumbnail is most of the section's height), leaving most of the
+   still-strong blob to hit the edge un-faded. Top stays untouched -- that
+   edge blends into the nav instead. */
 .bg-mesh-hero {
   background-image:
     radial-gradient(ellipse 60% 50% at 20% 0%, color-mix(in srgb, var(--color-indigo-500) 35%, transparent), transparent),
     radial-gradient(ellipse 50% 40% at 90% 20%, color-mix(in srgb, var(--color-volt-500) 25%, transparent), transparent);
-  mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
+  /* Extra intermediate stops approximate an eased falloff instead of a
+     straight linear one -- a plain two-stop linear alpha fade still read as
+     a visible "knee" right where it finally hits zero, since the eye is
+     more sensitive to contrast at low brightness than a linear ramp accounts
+     for (Weber-Fechner-ish). Decelerating the fade near the end smooths that
+     perceived edge out. */
+  mask-image: linear-gradient(
+    to bottom,
+    black 40%,
+    rgba(0, 0, 0, 0.75) 60%,
+    rgba(0, 0, 0, 0.4) 80%,
+    rgba(0, 0, 0, 0.12) 92%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 40%,
+    rgba(0, 0, 0, 0.75) 60%,
+    rgba(0, 0, 0, 0.4) 80%,
+    rgba(0, 0, 0, 0.12) 92%,
+    transparent 100%
+  );
 }
 
 /* Compact ambient glow for short full-bleed bands (the closing CTA). Reusing

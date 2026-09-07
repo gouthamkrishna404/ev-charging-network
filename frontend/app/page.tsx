@@ -196,7 +196,12 @@ export default function Home() {
         </div>
 
         {tickerFacts.length > 0 && (
-          <div className="relative max-w-6xl mx-auto mt-10 border-t border-white/10 pt-5 flex items-center gap-2.5 text-sm text-slate-300">
+          <div className="relative max-w-6xl mx-auto mt-10 pt-5 flex items-center gap-2.5 text-sm text-slate-300">
+            {/* A plain border-t here is a solid edge-to-edge stroke -- at
+                this point in the hero the mesh glow has already faded out,
+                so a full-width line read as a harsh architectural cut rather
+                than a soft divider. Fading it out at both ends instead. */}
+            <div aria-hidden className="absolute top-0 left-4 right-4 sm:left-6 sm:right-6 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             <span className="text-[10px] font-semibold uppercase tracking-wider text-volt-400 shrink-0">Right now</span>
             <span key={tickerIndex} className="animate-fade-in truncate">
               {tickerFacts[tickerIndex]}
