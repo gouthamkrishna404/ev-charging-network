@@ -120,7 +120,7 @@ function BookingsContent() {
       )}
 
       {activeSession && (
-        <div className="relative rounded-2xl overflow-hidden bg-slate-950 text-white shadow-xl animate-fade-in-up">
+        <div className="relative rounded-2xl overflow-hidden bg-slate-950/60 ring-1 ring-white/10 text-white shadow-xl animate-fade-in-up">
           <div aria-hidden className="absolute inset-0 bg-mesh-hero" />
           <div className="relative p-5 sm:p-6">
             <div className="flex items-center gap-2 flex-wrap mb-1">

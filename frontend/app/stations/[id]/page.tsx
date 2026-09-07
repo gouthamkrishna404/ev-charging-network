@@ -228,7 +228,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
       </div>
 
       {isDriver && activeVehicles.length > 0 && bestConnector && (
-        <div className="hidden sm:flex relative rounded-2xl overflow-hidden bg-slate-950 text-white items-center gap-4 p-5">
+        <div className="hidden sm:flex relative rounded-2xl overflow-hidden bg-slate-950/60 ring-1 ring-white/10 text-white items-center gap-4 p-5">
           <div aria-hidden className="absolute inset-0 bg-mesh-hero" />
           <div className="relative flex-1 min-w-0">
             <span className="inline-flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase text-volt-400 bg-white/5 ring-1 ring-white/10 rounded-full px-2.5 py-1">
@@ -439,7 +439,7 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
           bottom tab bar rather than at true bottom:0 so the two don't overlap. */}
       {isDriver && activeVehicles.length > 0 && bestConnector && bookingConnectorId === null && (
         <div className="md:hidden fixed inset-x-0 bottom-16 z-20 px-4 pb-2">
-          <div className="max-w-md mx-auto bg-slate-900 text-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 animate-fade-in-up">
+          <div className="max-w-md mx-auto bg-slate-950/80 backdrop-blur-md ring-1 ring-white/10 text-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 animate-fade-in-up">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium truncate">{station.station_name}</p>
               <p className="text-xs text-slate-400">{bestConnector.connector_type_name} available now</p>

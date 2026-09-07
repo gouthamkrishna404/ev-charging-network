@@ -111,7 +111,7 @@ export default function Home() {
   return (
     <div className="space-y-24 pb-12">
       {/* Hero */}
-      <section className="relative -mx-4 sm:-mx-6 px-4 sm:px-6 pt-14 pb-16 overflow-hidden bg-slate-950 text-white -mt-8">
+      <section className="relative -mx-4 sm:-mx-6 px-4 sm:px-6 pt-14 pb-16 overflow-hidden text-white -mt-8">
         <div aria-hidden className="absolute inset-0 bg-mesh-hero" />
         <div aria-hidden className="absolute inset-0 bg-dot-grid opacity-40 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_20%,black,transparent)]" />
 
@@ -302,7 +302,7 @@ export default function Home() {
 
       {/* Trust / reliability */}
       <section>
-        <div className="rounded-2xl bg-slate-900 text-white shadow-lg p-6 sm:p-7">
+        <div className="rounded-2xl bg-slate-950/50 ring-1 ring-white/10 text-white shadow-lg p-6 sm:p-7">
           <div className="flex items-start gap-4">
             <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
               <ShieldCheck size={22} className="text-emerald-400" strokeWidth={2} />
@@ -320,7 +320,7 @@ export default function Home() {
 
       {/* Final CTA */}
       {!loggedIn && (
-        <section className="relative -mx-4 sm:-mx-6 px-4 sm:px-6 py-14 overflow-hidden bg-slate-950 text-white text-center">
+        <section className="relative -mx-4 sm:-mx-6 px-4 sm:px-6 py-14 overflow-hidden text-white text-center">
           <div aria-hidden className="absolute inset-0 bg-mesh-hero" />
           <div className="relative">
             <p className="font-display text-2xl font-semibold tracking-tight">Ready to find your next charge?</p>
