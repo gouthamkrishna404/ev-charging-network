@@ -5,7 +5,7 @@ import { History, Pencil, Plus, ShieldCheck, ShieldX, UserMinus, UserPlus, type 
 import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { AuditLogEntry } from "@/lib/admin-types";
-import { Card, EmptyState, PageHeader, Skeleton } from "@/components/ui";
+import { Card, EmptyState, PageHeader, Skeleton, Stat } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 const ACTION_ICONS: Record<string, LucideIcon> = {
@@ -34,9 +34,18 @@ function AuditLogContent() {
       .catch((err) => toast.error(err instanceof ApiError ? err.message : "Failed to load audit log"));
   }, []);
 
+  const weekCutoff = new Date().getTime() - 7 * 86400000;
+  const recentCount = entries?.filter((e) => new Date(e.timestamp).getTime() >= weekCutoff).length ?? 0;
+
   return (
     <div>
       <PageHeader title="Audit Log" subtitle="Recent admin actions across your operator's stations." />
+      {entries !== null && entries.length > 0 && (
+        <Card className="p-5 mb-6 flex flex-wrap gap-8">
+          <Stat value={entries.length} label="total actions" />
+          <Stat value={recentCount} label="in the last 7 days" />
+        </Card>
+      )}
       {entries === null ? (
         <div className="space-y-2">
           {[...Array(4)].map((_, i) => (

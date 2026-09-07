@@ -190,18 +190,23 @@ def _plate(rng_: random.Random, city: str) -> str:
     return f"{code}{rng_.randint(1, 9):02d}{chr(65 + rng_.randint(0, 25))}{chr(65 + rng_.randint(0, 25))}{rng_.randint(1000, 9999)}"
 
 
-def _add_station(db, operator, location, name, price_per_kwh, hours_profile, charger_keys, admins, connector_types, log_admin):
+def _add_station(db, operator, location, name, price_per_kwh, hours_profile, charger_keys, admins, connector_types, log_admin, created_at):
     station = ChargingStation(operator_id=operator.id, location_id=location.id, station_name=name, status="active")
     db.add(station)
     db.flush()
 
     db.add(Tariff(station_id=station.id, price_per_kwh=price_per_kwh))
-    for admin in admins:
-        db.add(StationAdmin(station_id=station.id, admin_id=admin.id))
     db.add(AuditLog(
         admin_id=log_admin.id, action="Create", table_affected="charging_stations",
-        record_id=station.id, description=f"Created station '{name}'",
+        record_id=station.id, description=f"Created station '{name}'", timestamp=created_at,
     ))
+    for admin in admins:
+        db.add(StationAdmin(station_id=station.id, admin_id=admin.id))
+        db.add(AuditLog(
+            admin_id=log_admin.id, action="Assign", table_affected="station_admins",
+            record_id=station.id, description=f"Assigned {admin.name} to manage '{name}'",
+            timestamp=created_at + timedelta(minutes=5),
+        ))
 
     if hours_profile == "standard_6_days":
         for day in ALL_DAYS[:6]:
@@ -322,7 +327,12 @@ def run():
         admin_by_operator = {"volt_grid": [admin_asha, admin_karan], "chargenow": [admin_divya, admin_farah]}
         log_admin_by_operator = {"volt_grid": admin_asha, "chargenow": admin_divya}
         stations_by_name = {}
+        seed_now = datetime.now(timezone.utc)
 
+        # Stagger "station creation" further back in the past for operators with more
+        # stations, so the audit log reads like a network that grew over months rather
+        # than a single burst of identical timestamps.
+        per_operator_index: dict[str, int] = {}
         for operator_key, name, address, city, state, lat, lng, price, hours_profile, charger_keys in STATION_SPECS:
             loc_key = (city, lat)
             if loc_key not in location_cache:
@@ -335,13 +345,17 @@ def run():
             operator = operators[operator_key]
             # Only the station's *own* super admin plus one station manager get assigned, mirroring real access control.
             admins = [a for a in admin_by_operator[operator_key] if a.role in ("super_admin", "station_manager")][:2]
+            idx = per_operator_index.get(operator_key, 0)
+            per_operator_index[operator_key] = idx + 1
+            created_at = seed_now - timedelta(days=180 - idx * 18, hours=rng.uniform(0, 20))
             station, connectors = _add_station(
                 db, operator, location_cache[loc_key], name, price, hours_profile, charger_keys,
-                admins, connector_types, log_admin_by_operator[operator_key],
+                admins, connector_types, log_admin_by_operator[operator_key], created_at,
             )
             stations_by_name[name] = station
             all_connectors.extend(connectors)
         db.flush()
+        admin_by_operator_id = {operators["volt_grid"].id: admin_asha, operators["chargenow"].id: admin_divya}
 
         # ---------- Drivers + vehicles ----------
         model_list = list(models.values())
@@ -518,12 +532,25 @@ def run():
 
                 if payment_status == "successful" and rng.random() < 0.06:
                     refund_status = rng.choice(["pending", "approved", "rejected"])
-                    db.add(Refund(
+                    requested_at = end_time + timedelta(hours=rng.uniform(1, 48))
+                    refund = Refund(
                         payment_id=payment.id, amount=(total * Decimal("0.2")).quantize(Decimal("0.01")),
-                        reason=rng.choice(REFUND_REASONS), status=refund_status,
-                    ))
+                        reason=rng.choice(REFUND_REASONS), status=refund_status, refund_date=requested_at,
+                    )
+                    db.add(refund)
                     if refund_status == "approved":
                         payment.payment_status = "refunded"
+                    if refund_status in ("approved", "rejected"):
+                        db.flush()
+                        resolving_admin = admin_by_operator_id.get(info["operator"].id)
+                        if resolving_admin:
+                            db.add(AuditLog(
+                                admin_id=resolving_admin.id,
+                                action="Approve" if refund_status == "approved" else "Reject",
+                                table_affected="refunds", record_id=refund.id,
+                                description=f"{refund_status.capitalize()} refund of ₹{refund.amount} for {info['station'].station_name}",
+                                timestamp=requested_at + timedelta(hours=rng.uniform(1, 30)),
+                            ))
         db.flush()
 
         # ---------- Reviews ----------
@@ -603,11 +630,62 @@ def run():
             start_time=future_start, end_time=future_start + timedelta(hours=2), status="confirmed",
         ))
 
-        db.add_all([
-            Notification(user_id=demo_user.id, message="Welcome to Volt Grid! Add a vehicle to get started.", type="System"),
-            Notification(user_id=demo_user.id, message=f"Booking confirmed for connector #{slow_connector.id}", type="Booking"),
-            Notification(user_id=demo_user.id, message="Your Premium subscription is now active.", type="Promotion", is_read=True),
-        ])
+        notifications = [
+            Notification(
+                user_id=demo_user.id, message="Welcome to Volt Grid! Add a vehicle to get started.",
+                type="System", sent_date=now - timedelta(days=88), is_read=True,
+            ),
+            Notification(
+                user_id=demo_user.id, message="Your Premium subscription is now active -- 15% off at every station on the network.",
+                type="Promotion", sent_date=now - timedelta(days=10), is_read=True,
+            ),
+            Notification(
+                user_id=demo_user.id, message=f"Booking confirmed at {koramangala_a.station_name} for tomorrow.",
+                type="Booking", sent_date=now, is_read=False,
+            ),
+        ]
+
+        # Derive the rest from the demo user's own recent activity so the bell reflects
+        # real bills/refunds instead of a few disconnected canned lines.
+        demo_bills = (
+            db.query(Bill)
+            .join(ChargingSession, Bill.session_id == ChargingSession.id)
+            .filter(ChargingSession.user_id == demo_user.id)
+            .order_by(Bill.generated_date.desc())
+            .limit(6)
+            .all()
+        )
+        for bill in demo_bills:
+            payment = bill.payment
+            if payment is None:
+                continue
+            recent = payment.payment_date >= now - timedelta(days=5)
+            if payment.payment_status in ("successful", "refunded"):
+                notifications.append(Notification(
+                    user_id=demo_user.id,
+                    message=f"Payment of ₹{bill.total_amount} received for your session at {bill.station_name}.",
+                    type="Payment", sent_date=payment.payment_date, is_read=not recent,
+                ))
+            elif payment.payment_status == "failed":
+                notifications.append(Notification(
+                    user_id=demo_user.id,
+                    message=f"Payment of ₹{bill.total_amount} failed for your session at {bill.station_name} -- please retry.",
+                    type="Payment", sent_date=payment.payment_date, is_read=not recent,
+                ))
+            if payment.refund is not None:
+                refund = payment.refund
+                if refund.status == "approved":
+                    notifications.append(Notification(
+                        user_id=demo_user.id, message=f"Your refund of ₹{refund.amount} was approved and is on its way.",
+                        type="Payment", sent_date=refund.refund_date, is_read=refund.refund_date < now - timedelta(days=5),
+                    ))
+                elif refund.status == "pending":
+                    notifications.append(Notification(
+                        user_id=demo_user.id, message=f"Refund request for ₹{refund.amount} is under review.",
+                        type="Payment", sent_date=refund.refund_date, is_read=False,
+                    ))
+
+        db.add_all(notifications)
 
         db.commit()
         print("Seed data created.")

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Zap } from "lucide-react";
+import { ProgressRing } from "./ui";
 
 function formatElapsed(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -10,7 +12,9 @@ function formatElapsed(seconds: number) {
 
 // No real charger hardware to poll, so this is a live estimate only -- the
 // authoritative energy figure is computed server-side (elapsed time at the
-// connector's rated power) the moment the session actually ends.
+// connector's rated power) the moment the session actually ends. There's no
+// fixed target kWh to reach (the driver decides when to stop), so the ring
+// spins indeterminately rather than filling toward a number that doesn't exist.
 export default function LiveEnergyEstimate({ startTime, powerKw }: { startTime: string; powerKw: number }) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -20,12 +24,17 @@ export default function LiveEnergyEstimate({ startTime, powerKw }: { startTime: 
   }, []);
 
   const elapsedSeconds = Math.max(0, (now - new Date(startTime).getTime()) / 1000);
-  const estimatedKwh = (powerKw * (elapsedSeconds / 3600)).toFixed(2);
+  const estimatedKwh = powerKw * (elapsedSeconds / 3600);
 
   return (
-    <p className="text-sm text-slate-600 flex items-center gap-2">
-      <span className="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-      {formatElapsed(elapsedSeconds)} elapsed · ~{estimatedKwh} kWh so far
-    </p>
+    <div className="flex items-center gap-4">
+      <ProgressRing progress={null} size={68} strokeWidth={5}>
+        <Zap size={20} className="text-indigo-500" fill="currentColor" strokeWidth={0} />
+      </ProgressRing>
+      <div>
+        <p className="text-2xl font-semibold text-slate-900 tabular-nums leading-none">~{estimatedKwh.toFixed(2)} kWh</p>
+        <p className="text-sm text-slate-500 mt-1.5">{formatElapsed(elapsedSeconds)} elapsed · {powerKw} kW</p>
+      </div>
+    </div>
   );
 }

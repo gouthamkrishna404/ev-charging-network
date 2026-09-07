@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
 import { TeamAdmin } from "@/lib/admin-types";
-import { Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select, Skeleton } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Select, Skeleton, Stat } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function TeamPage() {
@@ -57,6 +57,14 @@ function TeamContent() {
         title="Team"
         subtitle="Everyone with an admin login under your operator. Assign them to specific stations from My Stations."
       />
+
+      {team !== null && team.length > 0 && (
+        <Card className="p-5 flex flex-wrap gap-8">
+          <Stat value={team.length} label="team members" />
+          <Stat value={team.filter((t) => t.status === "active").length} label="active" />
+          <Stat value={team.filter((t) => t.role === "super_admin").length} label="super admins" />
+        </Card>
+      )}
 
       <ul className="space-y-2">
         {team === null && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-[60px]" />)}
