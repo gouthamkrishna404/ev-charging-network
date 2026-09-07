@@ -27,13 +27,22 @@ export default function Nav() {
 
   // At the very top of the page the nav should read as part of the canvas
   // behind it, not a bar sitting on top -- only pick up a surface of its own
-  // once there's scrolled content it needs to stay legible over.
+  // once there's scrolled content it needs to stay legible over. Re-checks
+  // on every route change (not just once on mount): Nav persists across
+  // client-side navigations, and next/navigation's scroll-to-top can land a
+  // frame after this component's effects run, so a check that only ever
+  // fired once at the very first mount could get stuck reporting whatever
+  // scroll position happened to exist at that instant.
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
+    const raf = requestAnimationFrame(onScroll);
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [pathname]);
 
   function handleLogout() {
     clearSession();

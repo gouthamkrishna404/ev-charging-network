@@ -164,12 +164,19 @@ body {
 
 /* Decorative radial mesh used behind the tall marketing hero. Kept as a
    utility class (rather than inline styles) so the gradient stops stay
-   consistent everywhere it's reused. Sized for a tall box -- both blobs have
-   room to fade out well before the section's own edges. */
+   consistent everywhere it's reused. The blobs themselves fade out well
+   before the section's own edges horizontally, but not vertically -- at the
+   hero's actual rendered height neither blob reaches transparent by the
+   bottom edge, so overflow-hidden was clipping it into a hard curved
+   cutoff right where "How it works" begins. A fixed-pixel bottom-only mask
+   (top stays untouched -- that edge blends into the nav instead) fixes it
+   regardless of how tall the hero ends up being at a given breakpoint. */
 .bg-mesh-hero {
   background-image:
     radial-gradient(ellipse 60% 50% at 20% 0%, color-mix(in srgb, var(--color-indigo-500) 35%, transparent), transparent),
     radial-gradient(ellipse 50% 40% at 90% 20%, color-mix(in srgb, var(--color-volt-500) 25%, transparent), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
 }
 
 /* Compact ambient glow for short full-bleed bands (the closing CTA). Reusing
@@ -195,17 +202,23 @@ body {
    Percentage stops, so it stretches to whatever the page's actual content
    height turns out to be rather than a fixed pixel span. */
 .bg-landing-flow {
-  /* No stop drops all the way to transparent -- a dip back to zero recreates
-     the exact flat-black dead zone this is meant to fix, just shifted
-     further down the page. Always at least a faint tint, rising toward the
-     hero/CTA ends. */
+  /* Between the first and last stop, nothing drops all the way to
+     transparent -- a dip back to zero would recreate the exact flat-black
+     dead zone this exists to fix, just shifted further down the page.
+     Always at least a faint tint in between, rising toward the hero/CTA
+     ends. The very last stretch DOES fade to transparent, though: this div
+     is sized to the landing page's own content, which ends right where the
+     CTA section ends -- the footer below it is a separate component with no
+     wash at all, so without this fade the wash's own tail color met the
+     footer's flat canvas in a hard line exactly at that boundary. */
   background-image: linear-gradient(
     180deg,
     color-mix(in srgb, var(--color-indigo-600) 16%, transparent) 0%,
     color-mix(in srgb, var(--color-indigo-500) 10%, transparent) 20%,
     color-mix(in srgb, var(--color-violet-600) 11%, transparent) 50%,
     color-mix(in srgb, var(--color-violet-500) 10%, transparent) 78%,
-    color-mix(in srgb, var(--color-indigo-500) 16%, transparent) 100%
+    color-mix(in srgb, var(--color-indigo-500) 16%, transparent) 92%,
+    transparent 100%
   );
 }
 
