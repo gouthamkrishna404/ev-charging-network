@@ -69,6 +69,7 @@ class VehicleModelOut(BaseModel):
     make: str
     model_name: str
     battery_capacity_kwh: Decimal
+    connector_type_names: list[str]
 
 
 class ConnectorTypeOut(BaseModel):
@@ -290,6 +291,7 @@ class ChargingPlanOut(BaseModel):
     priority_booking: bool
     max_sessions: int | None
     status: str
+    active_subscriber_count: int = 0
 
 
 class ChargingPlanCreate(BaseModel):

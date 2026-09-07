@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Clock, MessageSquare, Play, Plug, Tag, UserCircle2, Zap } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Clock, MessageSquare, Play, Plug, Tag, UserCircle2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { getRole, isLoggedIn } from "@/lib/auth";
@@ -13,6 +13,7 @@ import {
   Badge,
   Button,
   Card,
+  Chip,
   EmptyState,
   Field,
   IconTile,
@@ -22,6 +23,18 @@ import {
   Skeleton,
   StarRating,
 } from "@/components/ui";
+
+function toLocalInputValue(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const DURATION_PRESETS = [
+  { label: "30 min", minutes: 30 },
+  { label: "1 hour", minutes: 60 },
+  { label: "2 hours", minutes: 120 },
+  { label: "4 hours", minutes: 240 },
+];
 
 const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -68,11 +81,30 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
   }, [id]);
 
   const activeVehicles = vehicles.filter((v) => v.vehicle_status === "active");
+  const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
+  const selectedModel = selectedVehicle ? models.find((m) => m.id === selectedVehicle.model_id) : undefined;
 
   function vehicleLabel(v: Vehicle) {
     const model = models.find((m) => m.id === v.model_id);
     return `${model ? `${model.make} ${model.model_name}` : "Vehicle"} — ${v.registration_number}`;
   }
+
+  function openBookingForm(connectorId: number) {
+    const start = new Date(Date.now() + 15 * 60000);
+    start.setMinutes(Math.ceil(start.getMinutes() / 5) * 5, 0, 0);
+    const end = new Date(start.getTime() + 60 * 60000);
+    setStartTime(toLocalInputValue(start));
+    setEndTime(toLocalInputValue(end));
+    setBookingConnectorId(connectorId);
+  }
+
+  function applyDuration(minutes: number) {
+    if (!startTime) return;
+    setEndTime(toLocalInputValue(new Date(new Date(startTime).getTime() + minutes * 60000)));
+  }
+
+  const currentDurationMinutes =
+    startTime && endTime ? Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000) : null;
 
   async function startWalkIn(connectorId: number) {
     if (vehicleId === "") {
@@ -218,44 +250,68 @@ export default function StationDetailPage(props: PageProps<"/stations/[id]">) {
               </p>
             </div>
             <ul className="space-y-2">
-              {charger.connectors.map((connector) => (
-                <li
-                  key={connector.id}
-                  className="flex flex-wrap items-center justify-between gap-2 text-sm border-t border-slate-100 pt-2.5"
-                >
-                  <span className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-slate-700">{connector.connector_type_name}</span>
-                    <span className="text-slate-400">#{connector.id} · {connector.max_power_kw} kW</span>
-                    <Badge status={connector.status} />
-                  </span>
-                  {connector.status === "available" && activeVehicles.length > 0 && (
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => startWalkIn(connector.id)}>
-                        <Play size={12} /> Start now
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => setBookingConnectorId(connector.id)}>
-                        <Clock size={12} /> Book for later
-                      </Button>
-                    </div>
-                  )}
-                </li>
-              ))}
+              {charger.connectors.map((connector) => {
+                const incompatible =
+                  !!selectedModel && !selectedModel.connector_type_names.includes(connector.connector_type_name);
+                return (
+                  <li
+                    key={connector.id}
+                    className="flex flex-wrap items-center justify-between gap-2 text-sm border-t border-slate-100 pt-2.5"
+                  >
+                    <span className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-slate-700">{connector.connector_type_name}</span>
+                      <span className="text-slate-400">#{connector.id} · {connector.max_power_kw} kW</span>
+                      <Badge status={connector.status} />
+                    </span>
+                    {connector.status === "available" && activeVehicles.length > 0 && (
+                      incompatible ? (
+                        <span className="flex items-center gap-1.5 text-xs text-amber-600">
+                          <AlertTriangle size={12} /> Not compatible with your {selectedModel!.make} {selectedModel!.model_name}
+                        </span>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => startWalkIn(connector.id)}>
+                            <Play size={12} /> Start now
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => openBookingForm(connector.id)}>
+                            <Clock size={12} /> Book for later
+                          </Button>
+                        </div>
+                      )
+                    )}
+                  </li>
+                );
+              })}
             </ul>
 
             {bookingConnectorId !== null && charger.connectors.some((c) => c.id === bookingConnectorId) && (
-              <form onSubmit={submitBooking} className="mt-3 flex flex-wrap items-end gap-3 bg-slate-50 p-3 rounded-lg">
-                <Field label="Start">
-                  <Input
-                    type="datetime-local"
-                    required
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
-                </Field>
-                <Field label="End">
-                  <Input type="datetime-local" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-                </Field>
-                <Button type="submit">Confirm booking</Button>
+              <form onSubmit={submitBooking} className="mt-3 space-y-3 bg-slate-50 p-3.5 rounded-lg">
+                <div className="flex flex-wrap items-end gap-3">
+                  <Field label="Start">
+                    <Input
+                      type="datetime-local"
+                      required
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="End">
+                    <Input type="datetime-local" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                  </Field>
+                  <Button type="submit">Confirm booking</Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-slate-400 mr-0.5">Quick duration:</span>
+                  {DURATION_PRESETS.map((preset) => (
+                    <Chip
+                      key={preset.minutes}
+                      active={currentDurationMinutes === preset.minutes}
+                      onClick={() => applyDuration(preset.minutes)}
+                    >
+                      {preset.label}
+                    </Chip>
+                  ))}
+                </div>
               </form>
             )}
           </Card>

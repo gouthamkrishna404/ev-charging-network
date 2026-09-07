@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { AdminRefund } from "@/lib/admin-types";
-import { Badge, Button, Card, EmptyState, IconTile, PageHeader, Skeleton } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, IconTile, PageHeader, Skeleton, Stat } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function AdminRefundsPage() {
@@ -38,15 +38,31 @@ function AdminRefundsContent() {
     }
   }
 
+  const sortedRefunds = useMemo(() => {
+    if (!refunds) return null;
+    return [...refunds].sort((a, b) => (a.status === "pending") === (b.status === "pending") ? 0 : a.status === "pending" ? -1 : 1);
+  }, [refunds]);
+
+  const pending = refunds?.filter((r) => r.status === "pending") ?? [];
+
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader title="Refund Requests" subtitle="Refunds requested by drivers on bills at your stations." />
+
+      {refunds !== null && refunds.length > 0 && (
+        <Card className="p-5 flex flex-wrap gap-8">
+          <Stat value={pending.length} label="pending review" />
+          <Stat value={`₹${pending.reduce((sum, r) => sum + Number(r.amount), 0).toFixed(2)}`} label="pending amount" />
+          <Stat value={refunds.filter((r) => r.status === "approved").length} label="approved all-time" />
+        </Card>
+      )}
+
       <ul className="space-y-3">
         {refunds === null && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-[76px]" />)}
-        {refunds?.map((r) => (
-          <Card key={r.id} className="p-4 flex items-center gap-3">
+        {sortedRefunds?.map((r) => (
+          <Card key={r.id} className="p-4 flex flex-wrap items-center gap-3">
             <IconTile icon={RotateCcw} tone={r.status === "pending" ? "amber" : "slate"} />
-            <div className="flex-1 min-w-0 text-sm">
+            <div className="flex-1 min-w-[160px] text-sm">
               <p className="text-slate-900">
                 Payment #{r.payment_id} — <span className="font-semibold">₹{r.amount}</span>
               </p>

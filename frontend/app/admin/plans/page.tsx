@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, RotateCcw, Tag, X } from "lucide-react";
+import { Plus, RotateCcw, Tag, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/auth";
 import { ChargingPlan } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Skeleton } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Field, IconTile, Input, PageHeader, Skeleton, Stat } from "@/components/ui";
 import RequireAuth from "@/components/RequireAuth";
 
 export default function AdminPlansPage() {
@@ -86,15 +86,26 @@ function AdminPlansContent() {
         subtitle="Subscription plans you sell. The discount is a network-wide perk — once a driver subscribes to any plan, it applies at every operator's stations, not just yours."
       />
 
+      {plans !== null && plans.length > 0 && (
+        <Card className="p-5 flex flex-wrap gap-8">
+          <Stat value={plans.reduce((sum, p) => sum + p.active_subscriber_count, 0)} label="active subscribers" />
+          <Stat value={plans.filter((p) => p.status === "active").length} label="active plans" />
+          <Stat value={plans.length} label="total plans" />
+        </Card>
+      )}
+
       <ul className="space-y-2">
         {plans === null && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-[52px]" />)}
         {plans?.map((plan) => (
-          <Card key={plan.id} className="p-3 flex items-center justify-between text-sm">
+          <Card key={plan.id} className="p-3.5 flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="flex items-center gap-3">
               <IconTile icon={Tag} tone={plan.status === "active" ? "indigo" : "slate"} />
               <span>
                 <span className="font-medium">{plan.plan_name}</span> — ₹{plan.subscription_fee} /{" "}
                 {plan.validity_days} days — {plan.discount_percentage}% off
+                <span className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
+                  <Users size={11} /> {plan.active_subscriber_count} active subscriber{plan.active_subscriber_count === 1 ? "" : "s"}
+                </span>
               </span>
             </span>
             <div className="flex items-center gap-2">

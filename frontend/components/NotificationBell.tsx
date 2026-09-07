@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Calendar, CreditCard, Sparkles, Wrench, Zap, type LucideIcon } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { AppNotification } from "@/lib/types";
+
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  Booking: Calendar,
+  Payment: CreditCard,
+  Maintenance: Wrench,
+  Promotion: Sparkles,
+  System: Zap,
+};
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -65,15 +73,25 @@ export default function NotificationBell() {
             )}
           </div>
           <ul className="max-h-80 overflow-y-auto">
-            {notifications.map((n) => (
-              <li
-                key={n.id}
-                className={`px-3.5 py-2.5 text-sm border-b border-slate-50 last:border-0 ${n.is_read ? "text-slate-500" : "text-slate-900 bg-indigo-50/40"}`}
-              >
-                {n.message}
-                <div className="text-xs text-slate-400 mt-0.5">{new Date(n.sent_date).toLocaleString()}</div>
-              </li>
-            ))}
+            {notifications.map((n) => {
+              const Icon = TYPE_ICONS[n.type] ?? Bell;
+              return (
+                <li
+                  key={n.id}
+                  className={`flex gap-2.5 px-3.5 py-2.5 text-sm border-b border-slate-50 last:border-0 ${n.is_read ? "text-slate-500" : "text-slate-900 bg-indigo-50/40"}`}
+                >
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${n.is_read ? "bg-slate-100 text-slate-400" : "bg-indigo-100 text-indigo-600"}`}
+                  >
+                    <Icon size={12} />
+                  </span>
+                  <div className="min-w-0">
+                    {n.message}
+                    <div className="text-xs text-slate-400 mt-0.5">{new Date(n.sent_date).toLocaleString()}</div>
+                  </div>
+                </li>
+              );
+            })}
             {notifications.length === 0 && <li className="px-3.5 py-6 text-sm text-slate-500 text-center">No notifications yet.</li>}
           </ul>
         </div>

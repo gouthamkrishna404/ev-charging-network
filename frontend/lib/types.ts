@@ -3,6 +3,7 @@ export interface VehicleModel {
   make: string;
   model_name: string;
   battery_capacity_kwh: string;
+  connector_type_names: string[];
 }
 
 export interface ConnectorTypeOut {
@@ -134,6 +135,7 @@ export interface ChargingPlan {
   priority_booking: boolean;
   max_sessions: number | null;
   status: string;
+  active_subscriber_count: number;
 }
 
 export interface Subscription {

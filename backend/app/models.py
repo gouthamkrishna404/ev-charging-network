@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -93,6 +95,10 @@ class VehicleModel(Base):
 
     vehicles = relationship("Vehicle", back_populates="model")
     connector_types = relationship("ModelConnectorType", back_populates="model")
+
+    @property
+    def connector_type_names(self) -> list[str]:
+        return sorted(mct.connector_type.type_name for mct in self.connector_types)
 
 
 class ConnectorType(Base):
@@ -413,6 +419,11 @@ class ChargingPlan(Base):
     @property
     def operator_name(self) -> str:
         return self.operator.operator_name
+
+    @property
+    def active_subscriber_count(self) -> int:
+        today = date.today()
+        return sum(1 for s in self.subscriptions if s.status == "active" and s.end_date >= today)
 
 
 class Subscription(Base):

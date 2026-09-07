@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import ConnectorType, User, Vehicle, VehicleModel
+from app.models import ConnectorType, ModelConnectorType, User, Vehicle, VehicleModel
 from app.schemas import ConnectorTypeOut, VehicleCreate, VehicleModelOut, VehicleOut
 
 router = APIRouter(tags=["vehicles"])
@@ -11,7 +11,11 @@ router = APIRouter(tags=["vehicles"])
 
 @router.get("/vehicle-models", response_model=list[VehicleModelOut])
 def list_vehicle_models(db: Session = Depends(get_db)):
-    return db.query(VehicleModel).all()
+    return (
+        db.query(VehicleModel)
+        .options(joinedload(VehicleModel.connector_types).joinedload(ModelConnectorType.connector_type))
+        .all()
+    )
 
 
 @router.get("/connector-types", response_model=list[ConnectorTypeOut])
